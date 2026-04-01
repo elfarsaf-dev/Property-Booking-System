@@ -271,19 +271,47 @@ export default function BookingsPage() {
         </Button>
       </div>
 
-      {/* Table */}
-      <Card className="bg-slate-800/60 border-slate-700/50">
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center h-40">
-              <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16 text-slate-500 text-sm">
-              Tidak ada data reservasi
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
+      {/* Loading / empty */}
+      {loading ? (
+        <div className="flex items-center justify-center h-40">
+          <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-slate-500 text-sm">
+          Tidak ada data reservasi
+        </div>
+      ) : (
+        <>
+          {/* Mobile card list */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {filtered.map((r) => (
+              <div
+                key={r.id}
+                data-testid={`row-booking-${r.id}`}
+                onClick={() => openView(r)}
+                className="bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3 cursor-pointer active:bg-slate-700/40 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold text-sm truncate">{r.guest_name}</p>
+                    <p className="text-slate-500 text-xs">{r.guest_phone}</p>
+                  </div>
+                  <Badge className={`${getStatusColor(r.status)} border text-xs px-2 py-0.5 shrink-0`}>
+                    {getStatusLabel(r.status)}
+                  </Badge>
+                </div>
+                <p className="text-slate-300 text-xs font-medium truncate mb-1">{r.property_name}</p>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>{formatDate(r.checkin)} → {formatDate(r.checkout)}</span>
+                  <span className="text-slate-300 font-medium">{formatRupiah(r.total_price)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="hidden md:block bg-slate-800/60 border-slate-700/50">
+            <CardContent className="p-0">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-slate-400 text-xs border-b border-slate-700 bg-slate-800/80">
@@ -329,10 +357,10 @@ export default function BookingsPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       <ModalBooking
         open={modalOpen}

@@ -85,33 +85,32 @@ function PropertyCard({ property, onClick }: { property: Property; onClick: () =
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Building2 className="w-10 h-10 text-slate-600" />
+            <Building2 className="w-8 h-8 text-slate-600" />
           </div>
         )}
       </div>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <h3 className="text-white font-semibold">{property.name}</h3>
-            <div className="flex items-center gap-1 text-slate-400 text-xs mt-0.5">
-              <MapPin className="w-3 h-3" />
-              {property.location}
+      <CardContent className="p-2.5 sm:p-4">
+        <div className="flex items-start justify-between mb-1.5 gap-1">
+          <div className="min-w-0">
+            <h3 className="text-white font-semibold text-xs sm:text-sm truncate">{property.name}</h3>
+            <div className="flex items-center gap-0.5 text-slate-400 text-[10px] sm:text-xs mt-0.5">
+              <MapPin className="w-2.5 h-2.5 shrink-0" />
+              <span className="truncate">{property.location}</span>
             </div>
           </div>
-          <Badge className={`text-xs ${property.type === "villa" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"}`}>
-            {property.type === "villa" ? <Building2 className="w-3 h-3 mr-1 inline" /> : <Tent className="w-3 h-3 mr-1 inline" />}
+          <Badge className={`text-[10px] sm:text-xs shrink-0 px-1.5 ${property.type === "villa" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"}`}>
             {property.type}
           </Badge>
         </div>
-        <div className="flex items-center gap-1 text-slate-400 text-xs mb-3">
-          <Users className="w-3 h-3" />
-          {property.capacity}
+        <div className="flex items-center gap-0.5 text-slate-400 text-[10px] sm:text-xs mb-2">
+          <Users className="w-2.5 h-2.5 shrink-0" />
+          <span className="truncate">{property.capacity}</span>
         </div>
         <div className="space-y-1">
-          {property.rates?.slice(0, 2).map((rate, i) => (
-            <div key={i} className="flex justify-between text-xs">
-              <span className="text-slate-400">{rate.label}</span>
-              <span className="text-white font-medium">{formatRupiah(rate.price)}</span>
+          {property.rates?.slice(0, 1).map((rate, i) => (
+            <div key={i} className="flex justify-between text-[10px] sm:text-xs gap-1">
+              <span className="text-slate-400 truncate">{rate.label}</span>
+              <span className="text-white font-medium shrink-0">{formatRupiah(rate.price)}</span>
             </div>
           ))}
         </div>
@@ -163,7 +162,7 @@ export default function KatalogPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-slate-500 text-sm">Belum ada properti</div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((p) => (
             <PropertyCard key={p.id} property={p} onClick={() => setSelected(p)} />
           ))}
