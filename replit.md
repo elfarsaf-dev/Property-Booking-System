@@ -1,3 +1,23 @@
+# Villa Booking Admin Panel
+
+## App Overview
+
+A full-featured villa booking admin panel that connects to an external API at `https://villadata.elfar.my.id`.
+
+### Features
+- **Login** — username/password authentication, verified against external API
+- **Dashboard** — total booking, omset, DP, DP hangus; line chart (omset per hari), pie chart (villa vs glamping), recent bookings
+- **Bookings** — full CRUD (tambah, lihat, edit, hapus); filter by bulan/tahun/status/search; export CSV and PDF
+- **Katalog** — view all properties with image gallery, rates, facilities, notes; filter villa/glamping
+- **Profile** — personal stats for logged-in admin, status breakdown, top properties, CS contact buttons
+
+### Tech
+- React + Vite (frontend-only, no local backend)
+- External API: `https://villadata.elfar.my.id` with `?user=xxx&pwd=xxx` auth
+- Recharts for charts, shadcn/ui components, Tailwind CSS dark theme
+
+---
+
 # Workspace
 
 ## Overview
