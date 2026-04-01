@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   getReservations,
   deleteReservation,
+  getAdminName,
   type Reservation,
 } from "@/services/api";
 import { formatRupiah, formatDate, getStatusColor, getStatusLabel, exportToCSV, exportToPDF } from "@/utils/helpers";
@@ -35,6 +36,7 @@ import {
   Loader2,
   RefreshCw,
   ChevronRight,
+  User,
 } from "lucide-react";
 
 const MONTHS = [
@@ -44,12 +46,14 @@ const MONTHS = [
 
 export default function BookingsPage() {
   const { toast } = useToast();
+  const adminName = getAdminName();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterMonth, setFilterMonth] = useState("all");
   const [filterYear, setFilterYear] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterMyOnly, setFilterMyOnly] = useState(true);
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [modalMode, setModalMode] = useState<"view" | "edit" | "create">("view");
   const [modalOpen, setModalOpen] = useState(false);
@@ -88,9 +92,10 @@ export default function BookingsPage() {
       const matchMonth = filterMonth === "all" || month === filterMonth;
       const matchYear = filterYear === "all" || year === filterYear;
       const matchStatus = filterStatus === "all" || r.status === filterStatus;
-      return matchSearch && matchMonth && matchYear && matchStatus;
+      const matchAdmin = !filterMyOnly || r.admin_name?.toLowerCase() === adminName.toLowerCase();
+      return matchSearch && matchMonth && matchYear && matchStatus && matchAdmin;
     });
-  }, [reservations, search, filterMonth, filterYear, filterStatus]);
+  }, [reservations, search, filterMonth, filterYear, filterStatus, filterMyOnly, adminName]);
 
   function openCreate() {
     setSelected(null);
@@ -155,7 +160,10 @@ export default function BookingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Bookings</h1>
-          <p className="text-slate-400 text-sm">{filtered.length} dari {reservations.length} reservasi</p>
+          <p className="text-slate-400 text-sm">
+            {filtered.length} dari {reservations.length} reservasi
+            {filterMyOnly && <span className="ml-1 text-blue-400">· {adminName}</span>}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -224,6 +232,21 @@ export default function BookingsPage() {
             <SelectItem value="cancel" className="text-white">Cancel</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setFilterMyOnly((v) => !v)}
+          className={`h-8 px-3 text-xs border transition-colors ${
+            filterMyOnly
+              ? "bg-blue-600 border-blue-500 text-white hover:bg-blue-500"
+              : "border-slate-600 text-slate-300 hover:bg-slate-800"
+          }`}
+          data-testid="button-filter-my"
+          title={filterMyOnly ? `Filter: hanya booking saya (${adminName})` : "Tampilkan semua booking"}
+        >
+          <User className="w-3.5 h-3.5 mr-1" />
+          {filterMyOnly ? "Hanya saya" : "Semua admin"}
+        </Button>
         <Button
           size="sm"
           variant="outline"
