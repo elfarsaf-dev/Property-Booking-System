@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { login, SUPERADMIN_USER, SUPERADMIN_PWD } from "@/services/api";
+import { login, SUPERADMIN_USER } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,23 +24,13 @@ export default function LoginPage() {
     }
     setLoading(true);
 
-    if (username.toLowerCase() === SUPERADMIN_USER) {
-      if (password === SUPERADMIN_PWD) {
-        login(SUPERADMIN_USER, password, "superadmin");
-        setLocation("/dashboard");
-      } else {
-        setError("Password superadmin salah.");
-      }
-      setLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch(`https://villadata.elfar.my.id/reservations?user=${username}&pwd=${password}`);
       if (!res.ok) {
         setError("Username atau password salah.");
       } else {
-        login(username, password, "admin");
+        const role = username.toLowerCase() === SUPERADMIN_USER ? "superadmin" : "admin";
+        login(username, password, role);
         setLocation("/dashboard");
       }
     } catch {

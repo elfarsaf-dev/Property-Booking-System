@@ -91,6 +91,7 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
   const { toast } = useToast();
   const [mode, setMode] = useState(initialMode);
   const [loading, setLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
   const [filterType, setFilterType] = useState<"all" | "villa" | "glamping">("all");
   const [filterLocation, setFilterLocation] = useState("all");
@@ -190,6 +191,22 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
     }
   }
 
+  async function handleQuickStatus(newStatus: "pending" | "lunas" | "cancel") {
+    if (!reservation || newStatus === reservation.status) return;
+    setStatusLoading(true);
+    try {
+      const res = await updateReservation({ ...reservation, status: newStatus });
+      if (!res.ok) throw new Error();
+      toast({ title: "Status diperbarui", description: `${reservation.guest_name} → ${newStatus}` });
+      onSuccess();
+      onClose();
+    } catch {
+      toast({ title: "Error", description: "Gagal mengubah status", variant: "destructive" });
+    } finally {
+      setStatusLoading(false);
+    }
+  }
+
   async function onSubmit(data: FormData) {
     setLoading(true);
     try {
@@ -233,6 +250,37 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
 
         {mode === "view" && reservation ? (
           <div className="space-y-4">
+            {/* Quick status change */}
+            <div className="space-y-2">
+              <p className="text-slate-400 text-xs font-medium">Ubah Status</p>
+              <div className="grid grid-cols-3 gap-2">
+                {STATUS_OPTIONS.map((opt) => {
+                  const isActive = reservation.status === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      disabled={statusLoading || isActive}
+                      onClick={() => handleQuickStatus(opt.value)}
+                      className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border transition-all ${
+                        isActive ? opt.activeClass : opt.inactiveClass
+                      } ${isActive ? "cursor-default" : "cursor-pointer"} disabled:opacity-60`}
+                    >
+                      {statusLoading && !isActive ? (
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                      ) : (
+                        <div className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-white" : opt.dot}`} />
+                      )}
+                      <span className="text-xs font-semibold">{opt.label}</span>
+                      <span className={`text-[10px] ${isActive ? "text-white/80" : "text-slate-500"}`}>
+                        {opt.desc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3 text-sm">
               {[
                 ["Nama Tamu", reservation.guest_name],
