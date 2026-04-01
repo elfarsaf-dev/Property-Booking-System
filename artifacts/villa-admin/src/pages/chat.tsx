@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getReservations, getAdminName } from "@/services/api";
+import { markContactSeen, getContactSeen } from "@/hooks/use-unread";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,8 @@ export default function ChatPage() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [showList, setShowList] = useState(true);
+  const [unreadContacts, setUnreadContacts] = useState<Set<string>>(new Set());
+  const unreadPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -73,17 +76,51 @@ export default function ChatPage() {
       .finally(() => setLoadingContacts(false));
   }, [myName]);
 
+  const checkUnread = useCallback(async (contactList: string[]) => {
+    if (!myName || !myPwd || contactList.length === 0) return;
+    const newUnread = new Set<string>();
+    await Promise.all(
+      contactList.map(async (c) => {
+        try {
+          const res = await fetch(
+            `${CHAT_BASE}/messages?user=${encodeURIComponent(myName)}&pwd=${encodeURIComponent(myPwd)}&user1=${encodeURIComponent(myName)}&user2=${encodeURIComponent(c)}`
+          );
+          if (!res.ok) return;
+          const msgs: Message[] = await res.json();
+          const latest = msgs
+            .filter((m) => m.sender.toLowerCase() === c.toLowerCase())
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          if (!latest) return;
+          const seen = getContactSeen(c);
+          if (!seen || new Date(latest.created_at).getTime() > new Date(seen).getTime()) {
+            newUnread.add(c);
+          }
+        } catch { /* ignore */ }
+      })
+    );
+    setUnreadContacts(newUnread);
+  }, [myName, myPwd]);
+
   const loadMessages = useCallback(async (contact: string, silent = false) => {
     if (!silent) setLoadingMessages(true);
     try {
       const data = await fetchMessages(myName, myPwd, myName, contact);
-      setMessages(data.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()));
+      const sorted = data.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      setMessages(sorted);
+      markContactSeen(contact);
     } catch {
       if (!silent) toast({ title: "Error", description: "Gagal memuat pesan", variant: "destructive" });
     } finally {
       if (!silent) setLoadingMessages(false);
     }
   }, [myName, myPwd, toast]);
+
+  useEffect(() => {
+    if (contacts.length === 0) return;
+    checkUnread(contacts);
+    unreadPollRef.current = setInterval(() => checkUnread(contacts), 15000);
+    return () => { if (unreadPollRef.current) clearInterval(unreadPollRef.current); };
+  }, [contacts.join(",")]);
 
   useEffect(() => {
     if (!selectedContact) return;
@@ -177,28 +214,38 @@ export default function ChatPage() {
                 Belum ada admin lain di sistem
               </div>
             ) : (
-              contacts.map((contact) => (
-                <button
-                  key={contact}
-                  onClick={() => selectContact(contact)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/40 transition-colors border-b border-slate-700/30 text-left ${
-                    selectedContact === contact ? "bg-blue-600/15 border-l-2 border-l-blue-500" : ""
-                  }`}
-                >
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500/30 to-blue-600/20 border border-blue-400/30 flex items-center justify-center shrink-0">
-                    <span className="text-blue-300 text-xs font-bold">{getInitial(contact)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-medium capitalize truncate">{contact}</p>
-                    {selectedContact === contact && lastMsgByContact(contact) && (
-                      <p className="text-slate-500 text-xs truncate">{lastMsgByContact(contact)}</p>
-                    )}
-                  </div>
-                  {selectedContact === contact && (
-                    <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
-                  )}
-                </button>
-              ))
+              contacts.map((contact) => {
+                const hasUnread = unreadContacts.has(contact);
+                const isActive = selectedContact === contact;
+
+                return (
+                  <button
+                    key={contact}
+                    onClick={() => selectContact(contact)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-700/40 transition-colors border-b border-slate-700/30 text-left ${
+                      isActive ? "bg-blue-600/15 border-l-2 border-l-blue-500" : ""
+                    }`}
+                  >
+                    <div className="relative w-9 h-9 shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500/30 to-blue-600/20 border border-blue-400/30 flex items-center justify-center">
+                        <span className="text-blue-300 text-xs font-bold">{getInitial(contact)}</span>
+                      </div>
+                      {hasUnread && !isActive && (
+                        <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full ring-2 ring-slate-800 animate-pulse" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium capitalize truncate ${hasUnread && !isActive ? "text-white font-semibold" : "text-slate-300"}`}>
+                        {contact}
+                      </p>
+                      {isActive && lastMsgByContact(contact) && (
+                        <p className="text-slate-500 text-xs truncate">{lastMsgByContact(contact)}</p>
+                      )}
+                    </div>
+                    {isActive && <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />}
+                  </button>
+                );
+              })
             )}
           </CardContent>
         </Card>
