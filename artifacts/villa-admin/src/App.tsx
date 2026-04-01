@@ -8,6 +8,7 @@ import LoginPage from "@/pages/login";
 import DashboardPage from "@/pages/dashboard";
 import BookingsPage from "@/pages/bookings";
 import KatalogPage from "@/pages/katalog";
+import ChatPage from "@/pages/chat";
 import ProfilePage from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
@@ -42,6 +43,9 @@ function Router() {
       </Route>
       <Route path="/katalog">
         <ProtectedRoute component={KatalogPage} />
+      </Route>
+      <Route path="/chat">
+        <ProtectedRoute component={ChatPage} />
       </Route>
       <Route path="/profile">
         <ProtectedRoute component={ProfilePage} />

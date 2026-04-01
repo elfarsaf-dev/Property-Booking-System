@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   CalendarCheck,
   Building2,
+  MessageCircle,
   User,
   LogOut,
   ShieldCheck,
@@ -13,6 +14,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/bookings", label: "Bookings", icon: CalendarCheck },
   { href: "/katalog", label: "Katalog", icon: Building2 },
+  { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
