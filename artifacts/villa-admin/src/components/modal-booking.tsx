@@ -64,7 +64,7 @@ const STATUS_OPTIONS = [
   {
     value: "pending" as const,
     label: "Pending",
-    desc: "Belum lunas / DP",
+    desc: "Belum lunas",
     activeClass: "bg-yellow-500 border-yellow-400 text-white shadow-[0_0_12px_rgba(234,179,8,0.4)]",
     inactiveClass: "bg-slate-800 border-slate-600 text-yellow-400 hover:border-yellow-500/60",
     dot: "bg-yellow-400",
@@ -72,7 +72,7 @@ const STATUS_OPTIONS = [
   {
     value: "lunas" as const,
     label: "Lunas",
-    desc: "Pembayaran selesai",
+    desc: "Lunas",
     activeClass: "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]",
     inactiveClass: "bg-slate-800 border-slate-600 text-emerald-400 hover:border-emerald-500/60",
     dot: "bg-emerald-400",
@@ -96,9 +96,7 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
   const [filterType, setFilterType] = useState<"all" | "villa" | "glamping">("all");
   const [filterLocation, setFilterLocation] = useState("all");
 
-  useEffect(() => {
-    setMode(initialMode);
-  }, [initialMode, open]);
+  useEffect(() => { setMode(initialMode); }, [initialMode, open]);
 
   useEffect(() => {
     getProperties().then(setProperties).catch(() => {});
@@ -107,19 +105,9 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      guest_name: "",
-      guest_phone: "",
-      property_name: "",
-      property_id: "",
-      checkin: "",
-      checkout: "",
-      total_price: 0,
-      dp: 0,
-      address: "",
-      people: "",
-      vehicles: "",
-      note: "",
-      status: "pending",
+      guest_name: "", guest_phone: "", property_name: "", property_id: "",
+      checkin: "", checkout: "", total_price: 0, dp: 0,
+      address: "", people: "", vehicles: "", note: "", status: "pending",
     },
   });
 
@@ -142,19 +130,9 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
       });
     } else if (!reservation && open) {
       form.reset({
-        guest_name: "",
-        guest_phone: "",
-        property_name: "",
-        property_id: "",
-        checkin: "",
-        checkout: "",
-        total_price: 0,
-        dp: 0,
-        address: "",
-        people: "",
-        vehicles: "",
-        note: "",
-        status: "pending",
+        guest_name: "", guest_phone: "", property_name: "", property_id: "",
+        checkin: "", checkout: "", total_price: 0, dp: 0,
+        address: "", people: "", vehicles: "", note: "", status: "pending",
       });
       setFilterType("all");
       setFilterLocation("all");
@@ -234,10 +212,16 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-white">
+      <DialogContent className="
+        bg-slate-900 border-slate-700 text-white
+        w-[calc(100vw-1rem)] sm:w-full sm:max-w-2xl
+        max-h-[88svh] sm:max-h-[90vh]
+        flex flex-col gap-0 p-0 overflow-hidden
+      ">
+        {/* Header — sticky */}
+        <DialogHeader className="shrink-0 px-4 sm:px-6 pt-5 pb-3 border-b border-slate-700/60">
+          <div className="flex items-center justify-between pr-6">
+            <DialogTitle className="text-white text-base sm:text-lg">
               {mode === "create" ? "Tambah Booking" : mode === "edit" ? "Edit Booking" : "Detail Booking"}
             </DialogTitle>
             {reservation && (
@@ -248,295 +232,301 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
           </div>
         </DialogHeader>
 
-        {mode === "view" && reservation ? (
-          <div className="space-y-4">
-            {/* Quick status change */}
-            <div className="space-y-2">
-              <p className="text-slate-400 text-xs font-medium">Ubah Status</p>
-              <div className="grid grid-cols-3 gap-2">
-                {STATUS_OPTIONS.map((opt) => {
-                  const isActive = reservation.status === opt.value;
-                  return (
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 space-y-4">
+          {mode === "view" && reservation ? (
+            <>
+              {/* Quick status change */}
+              <div className="space-y-2">
+                <p className="text-slate-400 text-xs font-medium uppercase tracking-wide">Ubah Status</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {STATUS_OPTIONS.map((opt) => {
+                    const isActive = reservation.status === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={statusLoading || isActive}
+                        onClick={() => handleQuickStatus(opt.value)}
+                        className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border transition-all ${
+                          isActive ? opt.activeClass : opt.inactiveClass
+                        } ${isActive ? "cursor-default" : "cursor-pointer"} disabled:opacity-60`}
+                      >
+                        {statusLoading && !isActive
+                          ? <Loader2 className="w-3 h-3 animate-spin" />
+                          : <div className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-white" : opt.dot}`} />
+                        }
+                        <span className="text-xs font-semibold">{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 text-sm">
+                {[
+                  ["Nama Tamu", reservation.guest_name],
+                  ["No. HP", reservation.guest_phone],
+                  ["Properti", reservation.property_name],
+                  ["ID Properti", reservation.property_id],
+                  ["Checkin", formatDate(reservation.checkin)],
+                  ["Checkout", formatDate(reservation.checkout)],
+                  ["Durasi", `${getNights(reservation.checkin, reservation.checkout)} malam`],
+                  ["Asal", reservation.address],
+                  ["Peserta", reservation.people],
+                  ["Kendaraan", reservation.vehicles],
+                  ["Total Harga", formatRupiah(reservation.total_price)],
+                  ["DP", formatRupiah(reservation.dp)],
+                ].map(([label, value]) => (
+                  <div key={label} className="bg-slate-800/60 rounded-lg p-2.5">
+                    <p className="text-slate-400 text-[11px] mb-0.5">{label}</p>
+                    <p className="text-white font-medium text-sm break-words">{value || "-"}</p>
+                  </div>
+                ))}
+              </div>
+              {reservation.note && (
+                <div className="bg-slate-800/60 rounded-lg p-3 text-sm">
+                  <p className="text-slate-400 text-[11px] mb-0.5">Catatan</p>
+                  <p className="text-white">{reservation.note}</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Nama + HP */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-slate-300 text-xs">Nama Tamu *</Label>
+                  <Input
+                    {...form.register("guest_name")}
+                    disabled={isReadonly}
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                    placeholder="Nama tamu"
+                  />
+                  {form.formState.errors.guest_name && (
+                    <p className="text-red-400 text-xs">{form.formState.errors.guest_name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-slate-300 text-xs">No. HP *</Label>
+                  <Input
+                    {...form.register("guest_phone")}
+                    disabled={isReadonly}
+                    type="tel"
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                    placeholder="628xxx"
+                  />
+                </div>
+              </div>
+
+              {/* Properti */}
+              <div className="space-y-2">
+                <Label className="text-slate-300 text-xs">Properti *</Label>
+                {!isReadonly && (
+                  <div className="flex flex-col gap-2">
+                    {/* Type filter */}
+                    <div className="flex gap-0 rounded-lg overflow-hidden border border-slate-600 self-start">
+                      {(["all", "villa", "glamping"] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => { setFilterType(t); form.setValue("property_id", ""); }}
+                          className={`px-3 py-2 text-xs capitalize transition-colors ${
+                            filterType === t
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                          }`}
+                        >
+                          {t === "all" ? "Semua" : t}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Location filter */}
+                    <Select value={filterLocation} onValueChange={(v) => { setFilterLocation(v); form.setValue("property_id", ""); }}>
+                      <SelectTrigger className="bg-slate-800 border-slate-600 text-white text-xs h-9 w-full sm:w-44">
+                        <SelectValue placeholder="Filter lokasi" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700">
+                        <SelectItem value="all" className="text-white text-xs">Semua lokasi</SelectItem>
+                        {locations.map((loc) => (
+                          <SelectItem key={loc} value={loc} className="text-white text-xs">{loc}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <Select
+                  disabled={isReadonly}
+                  value={form.watch("property_id")}
+                  onValueChange={handlePropertyChange}
+                >
+                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white text-sm h-10">
+                    <SelectValue placeholder="Pilih properti..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700 max-h-52">
+                    {filteredProperties.map((p) => (
+                      <SelectItem key={p.id} value={p.id} className="text-white hover:bg-slate-700">
+                        <span className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                            p.type === "villa" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"
+                          }`}>{p.type}</span>
+                          <span>{p.name}</span>
+                          {p.location && <span className="text-slate-400 text-xs">· {p.location}</span>}
+                          {p.rates?.[0] && <span className="text-slate-500 text-xs">· {formatRupiah(p.rates[0].price)}</span>}
+                        </span>
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__manual__" className="text-slate-400">
+                      ✏️ Input Manual
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.watch("property_id") === "__manual__" && (
+                  <Input
+                    {...form.register("property_name")}
+                    disabled={isReadonly}
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                    placeholder="Nama properti manual"
+                  />
+                )}
+                {form.formState.errors.property_name && (
+                  <p className="text-red-400 text-xs">{form.formState.errors.property_name.message}</p>
+                )}
+              </div>
+
+              {/* Checkin / Checkout */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-slate-300 text-xs">Checkin *</Label>
+                  <Input
+                    type="date"
+                    {...form.register("checkin")}
+                    disabled={isReadonly}
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-slate-300 text-xs">Checkout *</Label>
+                  <Input
+                    type="date"
+                    {...form.register("checkout")}
+                    disabled={isReadonly}
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                  />
+                </div>
+              </div>
+              {nights > 0 && (
+                <p className="text-blue-400 text-xs -mt-2 font-medium">⏱ Durasi: {nights} malam</p>
+              )}
+
+              {/* Harga / DP */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-slate-300 text-xs">
+                    Total Harga (Rp)
+                    {!isReadonly && form.watch("property_id") && form.watch("property_id") !== "__manual__" && (
+                      <span className="ml-1 text-blue-400 font-normal">· auto</span>
+                    )}
+                  </Label>
+                  <Input
+                    type="number"
+                    {...form.register("total_price")}
+                    disabled={isReadonly}
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-slate-300 text-xs">DP (Rp)</Label>
+                  <Input
+                    type="number"
+                    {...form.register("dp")}
+                    disabled={isReadonly}
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                    inputMode="numeric"
+                  />
+                </div>
+              </div>
+
+              {/* Asal */}
+              <div className="space-y-1.5">
+                <Label className="text-slate-300 text-xs">Asal / Alamat</Label>
+                <Input
+                  {...form.register("address")}
+                  disabled={isReadonly}
+                  className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                  placeholder="Solo, Jakarta, dll"
+                />
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label className="text-slate-300 text-xs">Status</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {STATUS_OPTIONS.map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
-                      disabled={statusLoading || isActive}
-                      onClick={() => handleQuickStatus(opt.value)}
-                      className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border transition-all ${
-                        isActive ? opt.activeClass : opt.inactiveClass
-                      } ${isActive ? "cursor-default" : "cursor-pointer"} disabled:opacity-60`}
+                      disabled={isReadonly}
+                      onClick={() => !isReadonly && form.setValue("status", opt.value)}
+                      className={`flex flex-col items-center gap-1 py-3 px-2 rounded-xl border transition-all ${
+                        currentStatus === opt.value ? opt.activeClass : opt.inactiveClass
+                      } ${isReadonly ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
                     >
-                      {statusLoading && !isActive ? (
-                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                      ) : (
-                        <div className={`w-2.5 h-2.5 rounded-full ${isActive ? "bg-white" : opt.dot}`} />
-                      )}
+                      <div className={`w-2.5 h-2.5 rounded-full ${
+                        currentStatus === opt.value ? "bg-white" : opt.dot
+                      }`} />
                       <span className="text-xs font-semibold">{opt.label}</span>
-                      <span className={`text-[10px] ${isActive ? "text-white/80" : "text-slate-500"}`}>
-                        {opt.desc}
-                      </span>
                     </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                ["Nama Tamu", reservation.guest_name],
-                ["No. HP", reservation.guest_phone],
-                ["Properti", reservation.property_name],
-                ["ID Properti", reservation.property_id],
-                ["Checkin", formatDate(reservation.checkin)],
-                ["Checkout", formatDate(reservation.checkout)],
-                ["Malam", `${getNights(reservation.checkin, reservation.checkout)} malam`],
-                ["Asal", reservation.address],
-                ["Peserta", reservation.people],
-                ["Kendaraan", reservation.vehicles],
-                ["Total Harga", formatRupiah(reservation.total_price)],
-                ["DP", formatRupiah(reservation.dp)],
-              ].map(([label, value]) => (
-                <div key={label} className="bg-slate-800/60 rounded-lg p-3">
-                  <p className="text-slate-400 text-xs mb-0.5">{label}</p>
-                  <p className="text-white font-medium">{value || "-"}</p>
-                </div>
-              ))}
-            </div>
-            {reservation.note && (
-              <div className="bg-slate-800/60 rounded-lg p-3 text-sm">
-                <p className="text-slate-400 text-xs mb-0.5">Catatan</p>
-                <p className="text-white">{reservation.note}</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Nama Tamu *</Label>
-                <Input
-                  {...form.register("guest_name")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                  placeholder="Nama tamu"
-                />
-                {form.formState.errors.guest_name && (
-                  <p className="text-red-400 text-xs">{form.formState.errors.guest_name.message}</p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">No. HP *</Label>
-                <Input
-                  {...form.register("guest_phone")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                  placeholder="628xxx"
-                />
-              </div>
-            </div>
-
-            {/* Property filter + select */}
-            <div className="space-y-2">
-              <Label className="text-slate-300 text-xs">Properti *</Label>
-              {!isReadonly && (
-                <div className="flex gap-2 mb-2">
-                  <div className="flex rounded-lg overflow-hidden border border-slate-600 text-xs">
-                    {(["all", "villa", "glamping"] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => { setFilterType(t); form.setValue("property_id", ""); }}
-                        className={`px-3 py-1.5 capitalize transition-colors ${
-                          filterType === t
-                            ? "bg-blue-600 text-white"
-                            : "bg-slate-800 text-slate-400 hover:bg-slate-700"
-                        }`}
-                      >
-                        {t === "all" ? "Semua" : t}
-                      </button>
-                    ))}
-                  </div>
-                  <Select value={filterLocation} onValueChange={(v) => { setFilterLocation(v); form.setValue("property_id", ""); }}>
-                    <SelectTrigger className="bg-slate-800 border-slate-600 text-white text-xs h-8 w-36">
-                      <SelectValue placeholder="Lokasi" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
-                      <SelectItem value="all" className="text-white text-xs">Semua lokasi</SelectItem>
-                      {locations.map((loc) => (
-                        <SelectItem key={loc} value={loc} className="text-white text-xs">{loc}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <Select
-                disabled={isReadonly}
-                value={form.watch("property_id")}
-                onValueChange={handlePropertyChange}
-              >
-                <SelectTrigger className="bg-slate-800 border-slate-600 text-white text-sm h-9">
-                  <SelectValue placeholder="Pilih properti..." />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  {filteredProperties.map((p) => (
-                    <SelectItem key={p.id} value={p.id} className="text-white hover:bg-slate-700">
-                      <span className="flex items-center gap-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                          p.type === "villa" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"
-                        }`}>{p.type}</span>
-                        {p.name}
-                        {p.location && <span className="text-slate-400 text-xs">· {p.location}</span>}
-                        {p.rates?.[0] && <span className="text-slate-500 text-xs">· {formatRupiah(p.rates[0].price)}</span>}
-                      </span>
-                    </SelectItem>
                   ))}
-                  <SelectItem value="__manual__" className="text-slate-400">
-                    ✏️ Input Manual
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              {form.watch("property_id") === "__manual__" && (
-                <Input
-                  {...form.register("property_name")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9 mt-1"
-                  placeholder="Nama properti"
-                />
-              )}
-              {form.formState.errors.property_name && (
-                <p className="text-red-400 text-xs">{form.formState.errors.property_name.message}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Checkin *</Label>
-                <Input
-                  type="date"
-                  {...form.register("checkin")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Checkout *</Label>
-                <Input
-                  type="date"
-                  {...form.register("checkout")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                />
-              </div>
-            </div>
-            {nights > 0 && (
-              <p className="text-blue-400 text-xs -mt-2">Durasi: {nights} malam</p>
-            )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">
-                  Total Harga (Rp)
-                  {!isReadonly && form.watch("property_id") && form.watch("property_id") !== "__manual__" && (
-                    <span className="ml-1 text-blue-400">· auto dari properti</span>
-                  )}
-                </Label>
-                <Input
-                  type="number"
-                  {...form.register("total_price")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">DP (Rp)</Label>
-                <Input
-                  type="number"
-                  {...form.register("dp")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-slate-300 text-xs">Asal / Alamat</Label>
-              <Input
-                {...form.register("address")}
-                disabled={isReadonly}
-                className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                placeholder="Solo, Jakarta, dll"
-              />
-            </div>
-
-            {/* Status — colored buttons */}
-            <div className="space-y-2">
-              <Label className="text-slate-300 text-xs">Status</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {STATUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
+              {/* Peserta + Kendaraan */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-slate-300 text-xs">Tamu (dewasa/anak)</Label>
+                  <Input
+                    {...form.register("people")}
                     disabled={isReadonly}
-                    onClick={() => !isReadonly && form.setValue("status", opt.value)}
-                    className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border transition-all ${
-                      currentStatus === opt.value ? opt.activeClass : opt.inactiveClass
-                    } ${isReadonly ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-                  >
-                    <div className={`w-2.5 h-2.5 rounded-full ${
-                      currentStatus === opt.value ? "bg-white" : opt.dot
-                    }`} />
-                    <span className="text-xs font-semibold">{opt.label}</span>
-                    <span className={`text-[10px] ${
-                      currentStatus === opt.value ? "text-white/80" : "text-slate-500"
-                    }`}>
-                      {opt.desc}
-                    </span>
-                  </button>
-                ))}
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                    placeholder="dewasa:2, anak:1"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-slate-300 text-xs">Kendaraan</Label>
+                  <Input
+                    {...form.register("vehicles")}
+                    disabled={isReadonly}
+                    className="bg-slate-800 border-slate-600 text-white text-sm h-10"
+                    placeholder="mobil:1"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Tamu (dewasa/anak)</Label>
-                <Input
-                  {...form.register("people")}
+              {/* Catatan */}
+              <div className="space-y-1.5 pb-1">
+                <Label className="text-slate-300 text-xs">Catatan</Label>
+                <Textarea
+                  {...form.register("note")}
                   disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                  placeholder="dewasa:2, anak:1"
+                  className="bg-slate-800 border-slate-600 text-white text-sm min-h-[80px] resize-none"
+                  placeholder="Catatan tambahan..."
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Kendaraan</Label>
-                <Input
-                  {...form.register("vehicles")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                  placeholder="mobil:1"
-                />
-              </div>
-            </div>
+            </form>
+          )}
+        </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-slate-300 text-xs">Catatan</Label>
-              <Textarea
-                {...form.register("note")}
-                disabled={isReadonly}
-                className="bg-slate-800 border-slate-600 text-white text-sm min-h-[70px] resize-none"
-                placeholder="Catatan tambahan..."
-              />
-            </div>
-          </form>
-        )}
-
-        <DialogFooter className="gap-2 mt-2">
+        {/* Footer — sticky */}
+        <DialogFooter className="shrink-0 flex flex-row gap-2 px-4 sm:px-6 py-3 border-t border-slate-700/60 bg-slate-900">
           {mode === "view" && reservation && (
             <>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onDelete?.(reservation.id)}
-                className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                className="flex-1 sm:flex-none border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-10"
                 data-testid="button-delete"
               >
                 <Trash2 className="w-3.5 h-3.5 mr-1.5" />
@@ -545,7 +535,7 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
               <Button
                 size="sm"
                 onClick={() => setMode("edit")}
-                className="bg-blue-600 hover:bg-blue-500 text-white"
+                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 text-white h-10"
                 data-testid="button-edit"
               >
                 <Edit2 className="w-3.5 h-3.5 mr-1.5" />
@@ -559,7 +549,7 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                className="flex-1 sm:flex-none border-slate-600 text-slate-300 hover:bg-slate-800 h-10"
               >
                 <X className="w-3.5 h-3.5 mr-1.5" />
                 Batal
@@ -568,11 +558,11 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
                 size="sm"
                 onClick={form.handleSubmit(onSubmit)}
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-500 text-white"
+                className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-500 text-white h-10"
                 data-testid="button-save"
               >
                 {loading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-                {mode === "edit" ? "Simpan Perubahan" : "Tambah Booking"}
+                {mode === "edit" ? "Simpan" : "Tambah"}
               </Button>
             </>
           )}
