@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { login } from "@/services/api";
+import { login, SUPERADMIN_USER, SUPERADMIN_PWD } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Building2, Eye, EyeOff, AlertCircle, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -23,14 +23,24 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
+
+    if (username.toLowerCase() === SUPERADMIN_USER) {
+      if (password === SUPERADMIN_PWD) {
+        login(SUPERADMIN_USER, password, "superadmin");
+        setLocation("/dashboard");
+      } else {
+        setError("Password superadmin salah.");
+      }
+      setLoading(false);
+      return;
+    }
+
     try {
-      login(username, password);
       const res = await fetch(`https://villadata.elfar.my.id/reservations?user=${username}&pwd=${password}`);
       if (!res.ok) {
         setError("Username atau password salah.");
-        localStorage.removeItem("user");
-        localStorage.removeItem("pwd");
       } else {
+        login(username, password, "admin");
         setLocation("/dashboard");
       }
     } catch {
@@ -39,6 +49,8 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
+
+  const isSuperAdminInput = username.toLowerCase() === SUPERADMIN_USER;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-4">
@@ -52,9 +64,14 @@ export default function LoginPage() {
         </div>
         <Card className="border-slate-700/50 bg-slate-800/60 backdrop-blur-sm shadow-2xl">
           <CardHeader className="pb-4">
-            <CardTitle className="text-white text-lg">Masuk ke Akun</CardTitle>
+            <CardTitle className="text-white text-lg flex items-center gap-2">
+              {isSuperAdminInput && <ShieldCheck className="w-4 h-4 text-amber-400" />}
+              Masuk ke Akun
+            </CardTitle>
             <CardDescription className="text-slate-400">
-              Gunakan kredensial admin Anda
+              {isSuperAdminInput
+                ? "Mode Superadmin — validasi lokal"
+                : "Gunakan kredensial admin Anda"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -73,7 +90,9 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Masukkan username"
-                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-400"
+                  className={`bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-blue-400 ${
+                    isSuperAdminInput ? "border-amber-500/50" : ""
+                  }`}
                 />
               </div>
               <div className="space-y-2">
@@ -101,7 +120,11 @@ export default function LoginPage() {
                 type="submit"
                 data-testid="button-login"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium mt-2"
+                className={`w-full font-medium mt-2 ${
+                  isSuperAdminInput
+                    ? "bg-amber-600 hover:bg-amber-500 text-white"
+                    : "bg-blue-600 hover:bg-blue-500 text-white"
+                }`}
               >
                 {loading ? "Memverifikasi..." : "Masuk"}
               </Button>

@@ -3,6 +3,7 @@ import {
   getReservations,
   deleteReservation,
   getAdminName,
+  isSuperAdmin,
   type Reservation,
 } from "@/services/api";
 import { formatRupiah, formatDate, getStatusColor, getStatusLabel, exportToCSV, exportToPDF } from "@/utils/helpers";
@@ -47,13 +48,14 @@ const MONTHS = [
 export default function BookingsPage() {
   const { toast } = useToast();
   const adminName = getAdminName();
+  const superAdmin = isSuperAdmin();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterMonth, setFilterMonth] = useState("all");
   const [filterYear, setFilterYear] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterMyOnly, setFilterMyOnly] = useState(true);
+  const [filterMyOnly, setFilterMyOnly] = useState(!superAdmin);
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [modalMode, setModalMode] = useState<"view" | "edit" | "create">("view");
   const [modalOpen, setModalOpen] = useState(false);

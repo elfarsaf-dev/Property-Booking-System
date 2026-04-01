@@ -1,5 +1,8 @@
 const BASE_URL = "https://villadata.elfar.my.id";
 
+export const SUPERADMIN_USER = "superadmin";
+export const SUPERADMIN_PWD = "SuperAdmin@2025";
+
 function getAuth() {
   const user = localStorage.getItem("user");
   const pwd = localStorage.getItem("pwd");
@@ -10,14 +13,20 @@ export function isLoggedIn() {
   return !!localStorage.getItem("user") && !!localStorage.getItem("pwd");
 }
 
-export function login(username: string, password: string) {
+export function isSuperAdmin() {
+  return localStorage.getItem("role") === "superadmin";
+}
+
+export function login(username: string, password: string, role: "admin" | "superadmin" = "admin") {
   localStorage.setItem("user", username);
   localStorage.setItem("pwd", password);
+  localStorage.setItem("role", role);
 }
 
 export function logout() {
   localStorage.removeItem("user");
   localStorage.removeItem("pwd");
+  localStorage.removeItem("role");
 }
 
 export function getAdminName() {

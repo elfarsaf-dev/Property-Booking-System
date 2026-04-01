@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,11 +60,40 @@ interface Props {
   mode?: "view" | "edit" | "create";
 }
 
+const STATUS_OPTIONS = [
+  {
+    value: "pending" as const,
+    label: "Pending",
+    desc: "Belum lunas / DP",
+    activeClass: "bg-yellow-500 border-yellow-400 text-white shadow-[0_0_12px_rgba(234,179,8,0.4)]",
+    inactiveClass: "bg-slate-800 border-slate-600 text-yellow-400 hover:border-yellow-500/60",
+    dot: "bg-yellow-400",
+  },
+  {
+    value: "lunas" as const,
+    label: "Lunas",
+    desc: "Pembayaran selesai",
+    activeClass: "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]",
+    inactiveClass: "bg-slate-800 border-slate-600 text-emerald-400 hover:border-emerald-500/60",
+    dot: "bg-emerald-400",
+  },
+  {
+    value: "cancel" as const,
+    label: "Cancel",
+    desc: "Dibatalkan",
+    activeClass: "bg-red-500 border-red-400 text-white shadow-[0_0_12px_rgba(239,68,68,0.4)]",
+    inactiveClass: "bg-slate-800 border-slate-600 text-red-400 hover:border-red-500/60",
+    dot: "bg-red-400",
+  },
+];
+
 export default function ModalBooking({ open, onClose, reservation, onSuccess, onDelete, mode: initialMode = "create" }: Props) {
   const { toast } = useToast();
   const [mode, setMode] = useState(initialMode);
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [filterType, setFilterType] = useState<"all" | "villa" | "glamping">("all");
+  const [filterLocation, setFilterLocation] = useState("all");
 
   useEffect(() => {
     setMode(initialMode);
@@ -126,14 +155,38 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
         note: "",
         status: "pending",
       });
+      setFilterType("all");
+      setFilterLocation("all");
     }
   }, [reservation, open]);
 
+  const locations = useMemo(() => {
+    const locs = new Set(properties.map((p) => p.location).filter(Boolean));
+    return [...locs].sort();
+  }, [properties]);
+
+  const filteredProperties = useMemo(() => {
+    return properties.filter((p) => {
+      const matchType = filterType === "all" || p.type === filterType;
+      const matchLoc = filterLocation === "all" || p.location === filterLocation;
+      return matchType && matchLoc;
+    });
+  }, [properties, filterType, filterLocation]);
+
   function handlePropertyChange(id: string) {
+    if (id === "__manual__") {
+      form.setValue("property_id", "__manual__");
+      form.setValue("property_name", "");
+      form.setValue("total_price", 0);
+      return;
+    }
     const prop = properties.find((p) => p.id === id);
     if (prop) {
       form.setValue("property_name", prop.name);
       form.setValue("property_id", prop.id);
+      if (prop.rates && prop.rates.length > 0) {
+        form.setValue("total_price", prop.rates[0].price);
+      }
     }
   }
 
@@ -160,6 +213,7 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
 
   const nights = getNights(form.watch("checkin"), form.watch("checkout"));
   const isReadonly = mode === "view";
+  const currentStatus = form.watch("status");
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -181,7 +235,7 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-sm">
               {[
-                ["Tamu", reservation.guest_name],
+                ["Nama Tamu", reservation.guest_name],
                 ["No. HP", reservation.guest_phone],
                 ["Properti", reservation.property_name],
                 ["ID Properti", reservation.property_id],
@@ -189,7 +243,7 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
                 ["Checkout", formatDate(reservation.checkout)],
                 ["Malam", `${getNights(reservation.checkin, reservation.checkout)} malam`],
                 ["Asal", reservation.address],
-                ["Tamu", reservation.people],
+                ["Peserta", reservation.people],
                 ["Kendaraan", reservation.vehicles],
                 ["Total Harga", formatRupiah(reservation.total_price)],
                 ["DP", formatRupiah(reservation.dp)],
@@ -233,8 +287,40 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
               </div>
             </div>
 
-            <div className="space-y-1.5">
+            {/* Property filter + select */}
+            <div className="space-y-2">
               <Label className="text-slate-300 text-xs">Properti *</Label>
+              {!isReadonly && (
+                <div className="flex gap-2 mb-2">
+                  <div className="flex rounded-lg overflow-hidden border border-slate-600 text-xs">
+                    {(["all", "villa", "glamping"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => { setFilterType(t); form.setValue("property_id", ""); }}
+                        className={`px-3 py-1.5 capitalize transition-colors ${
+                          filterType === t
+                            ? "bg-blue-600 text-white"
+                            : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                        }`}
+                      >
+                        {t === "all" ? "Semua" : t}
+                      </button>
+                    ))}
+                  </div>
+                  <Select value={filterLocation} onValueChange={(v) => { setFilterLocation(v); form.setValue("property_id", ""); }}>
+                    <SelectTrigger className="bg-slate-800 border-slate-600 text-white text-xs h-8 w-36">
+                      <SelectValue placeholder="Lokasi" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectItem value="all" className="text-white text-xs">Semua lokasi</SelectItem>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc} value={loc} className="text-white text-xs">{loc}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <Select
                 disabled={isReadonly}
                 value={form.watch("property_id")}
@@ -244,13 +330,20 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
                   <SelectValue placeholder="Pilih properti..." />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-800 border-slate-700">
-                  {properties.map((p) => (
+                  {filteredProperties.map((p) => (
                     <SelectItem key={p.id} value={p.id} className="text-white hover:bg-slate-700">
-                      {p.name} — {p.location}
+                      <span className="flex items-center gap-2">
+                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                          p.type === "villa" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"
+                        }`}>{p.type}</span>
+                        {p.name}
+                        {p.location && <span className="text-slate-400 text-xs">· {p.location}</span>}
+                        {p.rates?.[0] && <span className="text-slate-500 text-xs">· {formatRupiah(p.rates[0].price)}</span>}
+                      </span>
                     </SelectItem>
                   ))}
                   <SelectItem value="__manual__" className="text-slate-400">
-                    Input Manual
+                    ✏️ Input Manual
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -261,6 +354,9 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
                   className="bg-slate-800 border-slate-600 text-white text-sm h-9 mt-1"
                   placeholder="Nama properti"
                 />
+              )}
+              {form.formState.errors.property_name && (
+                <p className="text-red-400 text-xs">{form.formState.errors.property_name.message}</p>
               )}
             </div>
 
@@ -290,7 +386,12 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Total Harga (Rp)</Label>
+                <Label className="text-slate-300 text-xs">
+                  Total Harga (Rp)
+                  {!isReadonly && form.watch("property_id") && form.watch("property_id") !== "__manual__" && (
+                    <span className="ml-1 text-blue-400">· auto dari properti</span>
+                  )}
+                </Label>
                 <Input
                   type="number"
                   {...form.register("total_price")}
@@ -309,32 +410,41 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Asal / Alamat</Label>
-                <Input
-                  {...form.register("address")}
-                  disabled={isReadonly}
-                  className="bg-slate-800 border-slate-600 text-white text-sm h-9"
-                  placeholder="Solo, Jakarta, dll"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-slate-300 text-xs">Status</Label>
-                <Select
-                  disabled={isReadonly}
-                  value={form.watch("status")}
-                  onValueChange={(v) => form.setValue("status", v as "pending" | "lunas" | "cancel")}
-                >
-                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white text-sm h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="pending" className="text-white">Pending</SelectItem>
-                    <SelectItem value="lunas" className="text-white">Lunas</SelectItem>
-                    <SelectItem value="cancel" className="text-white">Cancel</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="space-y-1.5">
+              <Label className="text-slate-300 text-xs">Asal / Alamat</Label>
+              <Input
+                {...form.register("address")}
+                disabled={isReadonly}
+                className="bg-slate-800 border-slate-600 text-white text-sm h-9"
+                placeholder="Solo, Jakarta, dll"
+              />
+            </div>
+
+            {/* Status — colored buttons */}
+            <div className="space-y-2">
+              <Label className="text-slate-300 text-xs">Status</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {STATUS_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    disabled={isReadonly}
+                    onClick={() => !isReadonly && form.setValue("status", opt.value)}
+                    className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border transition-all ${
+                      currentStatus === opt.value ? opt.activeClass : opt.inactiveClass
+                    } ${isReadonly ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <div className={`w-2.5 h-2.5 rounded-full ${
+                      currentStatus === opt.value ? "bg-white" : opt.dot
+                    }`} />
+                    <span className="text-xs font-semibold">{opt.label}</span>
+                    <span className={`text-[10px] ${
+                      currentStatus === opt.value ? "text-white/80" : "text-slate-500"
+                    }`}>
+                      {opt.desc}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
 
