@@ -6,7 +6,7 @@ import {
   isSuperAdmin,
   type Reservation,
 } from "@/services/api";
-import { formatRupiah, formatDate, getStatusColor, getStatusLabel, exportToCSV, exportToPDF } from "@/utils/helpers";
+import { formatRupiah, formatDate, getStatusColor, getStatusLabel, exportToXLSX, exportToPDF } from "@/utils/helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -122,37 +122,12 @@ export default function BookingsPage() {
     setDeleteId(null);
   }
 
-  function handleExportCSV() {
-    const rows = filtered.map((r) => ({
-      ID: r.id,
-      Tamu: r.guest_name,
-      HP: r.guest_phone,
-      Properti: r.property_name,
-      Checkin: r.checkin,
-      Checkout: r.checkout,
-      "Total (Rp)": r.total_price,
-      "DP (Rp)": r.dp,
-      Asal: r.address,
-      Peserta: r.people,
-      Kendaraan: r.vehicles,
-      Status: r.status,
-      Catatan: r.note,
-    }));
-    exportToCSV(rows as Record<string, unknown>[], `reservasi_${new Date().toLocaleDateString("id-ID").replace(/\//g, "-")}.csv`);
+  function handleExportXLSX() {
+    exportToXLSX(filtered, adminName, filterMonth, filterYear);
   }
 
   function handleExportPDF() {
-    const rows = filtered.map((r) => ({
-      Tamu: r.guest_name,
-      HP: r.guest_phone,
-      Properti: r.property_name,
-      Checkin: r.checkin,
-      Checkout: r.checkout,
-      Total: formatRupiah(r.total_price),
-      DP: formatRupiah(r.dp),
-      Status: getStatusLabel(r.status),
-    }));
-    exportToPDF(rows as Record<string, unknown>[], "reservasi.pdf", "Laporan Reservasi Villa");
+    exportToPDF(filtered, adminName, filterMonth, filterYear);
   }
 
   return (
@@ -235,19 +210,21 @@ export default function BookingsPage() {
         <Button
           size="sm"
           variant="outline"
-          onClick={handleExportCSV}
-          className="border-slate-600 text-slate-300 hover:bg-slate-800 h-8 px-3 text-xs"
-          data-testid="button-export-csv"
+          onClick={handleExportXLSX}
+          className="border-emerald-600/50 text-emerald-400 hover:bg-emerald-500/10 h-8 px-3 text-xs"
+          data-testid="button-export-xlsx"
+          title="Export ke Excel (.xlsx) dengan sheet per properti"
         >
           <FileDown className="w-3.5 h-3.5 mr-1" />
-          CSV
+          XLSX
         </Button>
         <Button
           size="sm"
           variant="outline"
           onClick={handleExportPDF}
-          className="border-slate-600 text-slate-300 hover:bg-slate-800 h-8 px-3 text-xs"
+          className="border-red-600/50 text-red-400 hover:bg-red-500/10 h-8 px-3 text-xs"
           data-testid="button-export-pdf"
+          title="Export ke PDF / Print"
         >
           <FileDown className="w-3.5 h-3.5 mr-1" />
           PDF
