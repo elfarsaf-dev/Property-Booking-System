@@ -122,8 +122,8 @@ export default function BookingsPage() {
     setDeleteId(null);
   }
 
-  function handleExportXLSX() {
-    exportToXLSX(filtered, adminName, filterMonth, filterYear);
+  async function handleExportXLSX() {
+    await exportToXLSX(filtered, adminName, filterMonth, filterYear);
   }
 
   function handleExportPDF() {
