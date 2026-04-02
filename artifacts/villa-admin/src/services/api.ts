@@ -104,3 +104,49 @@ export async function getProperties(): Promise<Property[]> {
   if (!res.ok) throw new Error("Gagal mengambil data properti");
   return res.json();
 }
+
+export type CatalogEndpoint = "properties" | "trips" | "catering" | "outbound";
+
+export interface CatalogItem {
+  id: string;
+  name: string;
+  price?: number;
+  category?: string;
+  description?: string;
+  image?: string;
+  location?: string;
+  facilities?: string[];
+  menu?: string[];
+  activities?: string[];
+  destinations?: string[];
+  notes?: string[];
+  duration?: string;
+}
+
+export async function getCatalog(endpoint: CatalogEndpoint): Promise<CatalogItem[]> {
+  const res = await fetch(`${BASE_URL}/${endpoint}${getAuth()}`);
+  if (!res.ok) throw new Error(`Gagal mengambil data ${endpoint}`);
+  return res.json();
+}
+
+export async function createCatalog(endpoint: CatalogEndpoint, data: Partial<CatalogItem>): Promise<Response> {
+  return fetch(`${BASE_URL}/${endpoint}${getAuth()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateCatalog(endpoint: CatalogEndpoint, data: Partial<CatalogItem> & { id: string }): Promise<Response> {
+  return fetch(`${BASE_URL}/${endpoint}${getAuth()}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteCatalog(endpoint: CatalogEndpoint, id: string): Promise<Response> {
+  return fetch(`${BASE_URL}/${endpoint}?id=${id}${getAuth().replace("?", "&")}`, {
+    method: "DELETE",
+  });
+}
