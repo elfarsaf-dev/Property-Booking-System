@@ -8,7 +8,7 @@ import {
   type CatalogItem,
   type CatalogEndpoint,
 } from "@/services/api";
-import { formatRupiah } from "@/utils/helpers";
+import { formatRupiah, exportCatalogToXLSX } from "@/utils/helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ import {
   Tag,
   Search,
   Upload,
+  FileDown,
 } from "lucide-react";
 
 type Tab = { key: CatalogEndpoint; label: string; icon: React.ElementType; color: string };
@@ -701,11 +702,19 @@ export default function KatalogPage() {
           <h1 className="text-xl font-bold text-white">Katalog</h1>
           <p className="text-slate-400 text-sm">{items.length} item · {currentTab.label}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <Button size="sm" variant="outline" onClick={() => load(activeTab)}
             className="border-slate-600 text-slate-300 hover:bg-slate-800 h-8 px-2.5">
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
+          {activeTab !== "properties" && items.length > 0 && (
+            <Button size="sm" variant="outline"
+              onClick={() => exportCatalogToXLSX(activeTab, items)}
+              className="border-emerald-600/50 text-emerald-400 hover:bg-emerald-600/10 h-8 px-2.5 gap-1.5">
+              <FileDown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+          )}
           <Button size="sm" onClick={openAdd}
             className="bg-blue-600 hover:bg-blue-500 text-white h-8 px-3">
             <Plus className="w-3.5 h-3.5 mr-1" />Tambah
@@ -775,7 +784,7 @@ export default function KatalogPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {items.map((item) => (
             <ItemCard key={item.id} item={item} endpoint={activeTab}
               onClick={() => setDetailItem(item)} />

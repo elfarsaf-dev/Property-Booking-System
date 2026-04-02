@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import type { Reservation } from "@/services/api";
+import type { Reservation, CatalogItem, CatalogEndpoint } from "@/services/api";
 
 /* ─────────────────────── formatting helpers ─────────────────────── */
 
@@ -392,6 +392,160 @@ export async function exportToXLSX(
   const a = document.createElement("a");
   a.href = url;
   a.download = `reservasi_${period.replace(/\s+/g, "_")}_${adminName}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ─────────────────────── Catalog XLSX export ───────────────────────── */
+
+const CATALOG_LABEL: Record<string, string> = {
+  trips:    "Trips",
+  catering: "Catering",
+  outbound: "Outbound",
+};
+
+const CAT_COL_DEFS: Record<CatalogEndpoint, Array<{ header: string; key: string; width: number; align: ExcelJS.Alignment["horizontal"] }>> = {
+  properties: [],
+  trips: [
+    { header: "No",         key: "no",           width: 5,  align: "center" },
+    { header: "Nama",       key: "name",          width: 28, align: "left"   },
+    { header: "Kategori",   key: "category",      width: 18, align: "left"   },
+    { header: "Harga",      key: "price",         width: 20, align: "right"  },
+    { header: "Destinasi",  key: "destinations",  width: 36, align: "left"   },
+    { header: "Fasilitas",  key: "facilities",    width: 36, align: "left"   },
+    { header: "Catatan",    key: "notes",         width: 36, align: "left"   },
+  ],
+  catering: [
+    { header: "No",         key: "no",            width: 5,  align: "center" },
+    { header: "Nama",       key: "name",          width: 28, align: "left"   },
+    { header: "Kategori",   key: "category",      width: 18, align: "left"   },
+    { header: "Harga",      key: "price",         width: 20, align: "right"  },
+    { header: "Deskripsi",  key: "description",   width: 36, align: "left"   },
+    { header: "Menu",       key: "menu",          width: 40, align: "left"   },
+  ],
+  outbound: [
+    { header: "No",         key: "no",            width: 5,  align: "center" },
+    { header: "Nama",       key: "name",          width: 28, align: "left"   },
+    { header: "Kategori",   key: "category",      width: 18, align: "left"   },
+    { header: "Harga",      key: "price",         width: 20, align: "right"  },
+    { header: "Durasi",     key: "duration",      width: 14, align: "center" },
+    { header: "Kapasitas",  key: "capacity",      width: 16, align: "center" },
+    { header: "Deskripsi",  key: "description",   width: 36, align: "left"   },
+    { header: "Aktivitas",  key: "activities",    width: 40, align: "left"   },
+    { header: "Fasilitas",  key: "facilities",    width: 36, align: "left"   },
+  ],
+};
+
+function buildCatalogSheet(
+  ws: ExcelJS.Worksheet,
+  items: CatalogItem[],
+  endpoint: CatalogEndpoint,
+  sheetTitle: string,
+) {
+  const cols = CAT_COL_DEFS[endpoint];
+  const NC = cols.length;
+  const now = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
+
+  ws.columns = cols.map((c) => ({ key: c.key, width: c.width }));
+
+  // Title row
+  const r1 = ws.addRow([sheetTitle]);
+  r1.height = 34;
+  ws.mergeCells(r1.number, 1, r1.number, NC);
+  styleCell(r1.getCell(1), { bg: C.navyDark, fontColor: C.white, bold: true, size: 13, align: "center" });
+
+  // Printed row
+  const r2 = ws.addRow([`Dicetak: ${now}   |   ${items.length} item`]);
+  r2.height = 18;
+  ws.mergeCells(r2.number, 1, r2.number, NC);
+  styleCell(r2.getCell(1), { bg: C.navyMid, fontColor: "FFB3C6E0", size: 9, align: "center" });
+
+  ws.addRow([]);
+
+  // Header row
+  const hdr = ws.addRow(cols.map((c) => c.header));
+  hdr.height = 24;
+  for (let ci = 1; ci <= NC; ci++) {
+    styleCell(hdr.getCell(ci), {
+      bg: C.navyBlue, fontColor: C.white, bold: true, size: 10,
+      align: cols[ci - 1].align, borderBottom: true,
+    });
+  }
+
+  // Data rows (no grouping here — called per category)
+  items.forEach((item, li) => {
+    const rowBg = li % 2 === 0 ? C.white : C.offWhite;
+    const rowData: Record<string, unknown> = {
+      no:          li + 1,
+      name:        item.name ?? "",
+      category:    item.category ?? "",
+      price:       item.price ?? 0,
+      description: item.description ?? "",
+      duration:    item.duration ?? "",
+      capacity:    item.capacity ?? "",
+      destinations: (item.destinations ?? []).join(", "),
+      facilities:  (item.facilities ?? []).join(", "),
+      activities:  (item.activities ?? []).join(", "),
+      menu:        (item.menu ?? []).join(", "),
+      notes:       (item.notes ?? []).join(", "),
+    };
+    const row = ws.addRow(cols.map((c) => rowData[c.key] ?? ""));
+    row.height = 18;
+    cols.forEach((cd, i) => {
+      const cell = row.getCell(i + 1);
+      const isMoney = cd.key === "price";
+      styleCell(cell, {
+        bg: rowBg, size: 10, align: cd.align,
+        numFmt: isMoney ? IDR_FMT : undefined,
+        wrapText: ["destinations", "facilities", "activities", "menu", "notes", "description"].includes(cd.key),
+      });
+      if (isMoney) {
+        styleCell(cell, { bg: rowBg, fontColor: C.navyDark, bold: true, align: "right", numFmt: IDR_FMT });
+      }
+    });
+  });
+}
+
+export async function exportCatalogToXLSX(
+  endpoint: CatalogEndpoint,
+  items: CatalogItem[],
+) {
+  if (!items.length || endpoint === "properties") return;
+
+  const label = CATALOG_LABEL[endpoint] ?? endpoint;
+  const now = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Villa Booking Admin";
+  wb.created = new Date();
+
+  // Group by category
+  const catMap = new Map<string, CatalogItem[]>();
+  for (const item of items) {
+    const key = item.category?.trim() || "Tanpa Kategori";
+    if (!catMap.has(key)) catMap.set(key, []);
+    catMap.get(key)!.push(item);
+  }
+
+  // Sheet 1: All items
+  const ws1 = wb.addWorksheet(`Semua ${label}`);
+  buildCatalogSheet(ws1, items, endpoint, `${label} — Semua Kategori (${now})`);
+
+  // Sheet per category
+  for (const [catName, catItems] of catMap) {
+    const sheetName = catName.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
+    const ws = wb.addWorksheet(sheetName);
+    buildCatalogSheet(ws, catItems, endpoint, `${label} — ${catName} (${now})`);
+  }
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `katalog_${endpoint}_${new Date().toISOString().slice(0, 10)}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }
