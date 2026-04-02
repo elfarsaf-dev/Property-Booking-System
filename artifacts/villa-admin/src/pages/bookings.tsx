@@ -54,6 +54,7 @@ export default function BookingsPage() {
   const [filterMonth, setFilterMonth] = useState("all");
   const [filterYear, setFilterYear] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterAdmin, setFilterAdmin] = useState("all");
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [modalMode, setModalMode] = useState<"view" | "edit" | "create">("view");
   const [modalOpen, setModalOpen] = useState(false);
@@ -78,6 +79,11 @@ export default function BookingsPage() {
     return [...s].sort((a, b) => b.localeCompare(a));
   }, [reservations]);
 
+  const adminNames = useMemo(() => {
+    const s = new Set(reservations.map((r) => r.admin_name).filter(Boolean) as string[]);
+    return [...s].sort((a, b) => a.localeCompare(b));
+  }, [reservations]);
+
   const filtered = useMemo(() => {
     return reservations.filter((r) => {
       const q = search.toLowerCase();
@@ -93,9 +99,10 @@ export default function BookingsPage() {
       const matchYear = filterYear === "all" || year === filterYear;
       const matchStatus = filterStatus === "all" || r.status === filterStatus;
       const matchAdmin = superAdmin || r.admin_name?.toLowerCase() === adminName.toLowerCase();
-      return matchSearch && matchMonth && matchYear && matchStatus && matchAdmin;
+      const matchFilterAdmin = !superAdmin || filterAdmin === "all" || r.admin_name?.toLowerCase() === filterAdmin.toLowerCase();
+      return matchSearch && matchMonth && matchYear && matchStatus && matchAdmin && matchFilterAdmin;
     });
-  }, [reservations, search, filterMonth, filterYear, filterStatus, superAdmin, adminName]);
+  }, [reservations, search, filterMonth, filterYear, filterStatus, filterAdmin, superAdmin, adminName]);
 
   function openCreate() {
     setSelected(null);
@@ -207,6 +214,19 @@ export default function BookingsPage() {
             <SelectItem value="cancel" className="text-white">Cancel</SelectItem>
           </SelectContent>
         </Select>
+        {superAdmin && (
+          <Select value={filterAdmin} onValueChange={setFilterAdmin}>
+            <SelectTrigger className="bg-slate-800 border-slate-600 text-white text-sm h-8 w-32">
+              <SelectValue placeholder="Admin" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="all" className="text-white">Semua admin</SelectItem>
+              {adminNames.map((name) => (
+                <SelectItem key={name} value={name} className="text-white">{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Button
           size="sm"
           variant="outline"
