@@ -68,7 +68,7 @@ type ArrayField = "facilities" | "menu" | "activities" | "destinations" | "notes
 interface FieldDef {
   key: keyof CatalogItem;
   label: string;
-  type?: "text" | "number" | "url" | "array";
+  type?: "text" | "number" | "url" | "array" | "rates";
   placeholder?: string;
 }
 
@@ -77,9 +77,9 @@ const FIELDS: Record<CatalogEndpoint, FieldDef[]> = {
     { key: "name",       label: "Nama",       placeholder: "Nama properti" },
     { key: "location",   label: "Lokasi",     placeholder: "Lokasi properti" },
     { key: "type",       label: "Tipe",       placeholder: "villa / glamping" },
-    { key: "price",      label: "Harga",      type: "number", placeholder: "Harga dasar" },
     { key: "capacity",   label: "Kapasitas",  placeholder: "Contoh: 20 orang" },
-    { key: "image",      label: "URL Gambar", type: "url", placeholder: "https://..." },
+    { key: "image",      label: "URL Gambar", type: "url",   placeholder: "https://..." },
+    { key: "rates",      label: "Harga (tarif)", type: "rates" },
     { key: "facilities", label: "Fasilitas",  type: "array", placeholder: "Tambah fasilitas..." },
     { key: "notes",      label: "Peraturan",  type: "array", placeholder: "Tambah peraturan..." },
   ],
@@ -87,24 +87,29 @@ const FIELDS: Record<CatalogEndpoint, FieldDef[]> = {
     { key: "name",         label: "Nama",       placeholder: "Nama trip" },
     { key: "category",     label: "Kategori",   placeholder: "Contoh: Adventure" },
     { key: "price",        label: "Harga",      type: "number", placeholder: "Harga per orang" },
-    { key: "destinations", label: "Destinasi",  type: "array", placeholder: "Tambah destinasi..." },
-    { key: "facilities",   label: "Fasilitas",  type: "array", placeholder: "Tambah fasilitas..." },
-    { key: "notes",        label: "Catatan",    type: "array", placeholder: "Tambah catatan..." },
+    { key: "image",        label: "URL Gambar", type: "url",    placeholder: "https://..." },
+    { key: "destinations", label: "Destinasi",  type: "array",  placeholder: "Tambah destinasi..." },
+    { key: "facilities",   label: "Fasilitas",  type: "array",  placeholder: "Tambah fasilitas..." },
+    { key: "notes",        label: "Catatan",    type: "array",  placeholder: "Tambah catatan..." },
   ],
   catering: [
     { key: "name",        label: "Nama",       placeholder: "Nama paket catering" },
     { key: "category",    label: "Kategori",   placeholder: "Contoh: Prasmanan" },
     { key: "price",       label: "Harga",      type: "number", placeholder: "Harga per porsi/paket" },
+    { key: "image",       label: "URL Gambar", type: "url",    placeholder: "https://..." },
     { key: "description", label: "Deskripsi",  placeholder: "Deskripsi singkat" },
-    { key: "menu",        label: "Menu",       type: "array", placeholder: "Tambah menu..." },
+    { key: "menu",        label: "Menu",       type: "array",  placeholder: "Tambah menu..." },
   ],
   outbound: [
-    { key: "name",       label: "Nama",       placeholder: "Nama paket outbound" },
-    { key: "category",   label: "Kategori",   placeholder: "Contoh: Team Building" },
-    { key: "price",      label: "Harga",      type: "number", placeholder: "Harga per orang" },
-    { key: "duration",   label: "Durasi",     placeholder: "Contoh: 2 jam" },
-    { key: "activities", label: "Aktivitas",  type: "array", placeholder: "Tambah aktivitas..." },
-    { key: "facilities", label: "Fasilitas",  type: "array", placeholder: "Tambah fasilitas..." },
+    { key: "name",        label: "Nama",       placeholder: "Nama paket outbound" },
+    { key: "category",    label: "Kategori",   placeholder: "Contoh: Team Building" },
+    { key: "price",       label: "Harga",      type: "number", placeholder: "Harga per orang" },
+    { key: "duration",    label: "Durasi",     placeholder: "Contoh: 2 jam" },
+    { key: "capacity",    label: "Kapasitas",  placeholder: "Contoh: 10-30 orang" },
+    { key: "image",       label: "URL Gambar", type: "url",    placeholder: "https://..." },
+    { key: "description", label: "Deskripsi",  placeholder: "Deskripsi singkat" },
+    { key: "activities",  label: "Aktivitas",  type: "array",  placeholder: "Tambah aktivitas..." },
+    { key: "facilities",  label: "Fasilitas",  type: "array",  placeholder: "Tambah fasilitas..." },
   ],
 };
 
@@ -140,6 +145,58 @@ function TagInput({ values, onChange, placeholder }: {
                 <X className="w-3 h-3" />
               </button>
             </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Rates Input ─── */
+function RatesInput({ values, onChange }: {
+  values: Array<{ label: string; price: number }>;
+  onChange: (v: Array<{ label: string; price: number }>) => void;
+}) {
+  const [label, setLabel] = useState("");
+  const [price, setPrice] = useState("");
+  function add() {
+    const l = label.trim();
+    const p = Number(price);
+    if (l && p > 0) {
+      onChange([...values, { label: l, price: p }]);
+      setLabel("");
+      setPrice("");
+    }
+  }
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input value={label} onChange={(e) => setLabel(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), add())}
+          placeholder="Label (cth: Sabtu/Minggu)"
+          className="bg-slate-800 border-slate-600 text-white text-sm h-8 flex-1" />
+        <Input value={price} onChange={(e) => setPrice(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), add())}
+          type="number" placeholder="Harga"
+          className="bg-slate-800 border-slate-600 text-white text-sm h-8 w-28" />
+        <Button type="button" size="sm" onClick={add}
+          className="bg-slate-700 hover:bg-slate-600 text-white h-8 px-3 shrink-0">
+          <Plus className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+      {values.length > 0 && (
+        <div className="space-y-1">
+          {values.map((r, i) => (
+            <div key={i} className="flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-1.5 text-xs">
+              <span className="text-slate-300">{r.label}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium">{formatRupiah(r.price)}</span>
+                <button type="button" onClick={() => onChange(values.filter((_, j) => j !== i))}
+                  className="text-slate-500 hover:text-red-400 transition-colors">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -192,7 +249,6 @@ function DetailModal({ item, endpoint, open, onClose, onEdit, onDelete }: {
   onClose: () => void; onEdit: () => void; onDelete: () => void;
 }) {
   const allImages = [item.image, ...(item.slide_images || [])].filter(Boolean) as string[];
-  const tab = TABS.find((t) => t.key === endpoint)!;
 
   const typeColor = item.type === "villa"
     ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
@@ -209,8 +265,7 @@ function DetailModal({ item, endpoint, open, onClose, onEdit, onDelete }: {
               <DialogTitle className="text-white text-lg">{item.name}</DialogTitle>
               {item.location && (
                 <div className="flex items-center gap-1 text-slate-400 text-sm mt-1">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  {item.location}
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />{item.location}
                 </div>
               )}
             </div>
@@ -223,32 +278,26 @@ function DetailModal({ item, endpoint, open, onClose, onEdit, onDelete }: {
           </div>
         </DialogHeader>
 
-        {/* Gallery */}
         {allImages.length > 0 && <ImageGallery images={allImages} />}
 
-        {/* Meta info */}
         <div className="space-y-4">
-          {item.capacity && (
+          {(item.capacity) && (
             <div className="flex items-center gap-2 text-slate-400 text-sm">
               <Users className="w-4 h-4" />
               Kapasitas: <span className="text-white">{item.capacity}</span>
-              {item.units != null && (
-                <span className="text-slate-500">· {item.units} unit</span>
-              )}
+              {item.units != null && <span className="text-slate-500">· {item.units} unit</span>}
             </div>
           )}
-
           {item.duration && (
             <div className="flex items-center gap-2 text-slate-400 text-sm">
               <span>⏱</span> Durasi: <span className="text-white">{item.duration}</span>
             </div>
           )}
-
           {item.description && (
             <p className="text-slate-400 text-sm leading-relaxed">{item.description}</p>
           )}
 
-          {/* Rates (properties) */}
+          {/* Rates */}
           {item.rates && item.rates.length > 0 && (
             <div>
               <h4 className="text-white font-medium text-sm mb-2">Harga per Malam</h4>
@@ -263,7 +312,7 @@ function DetailModal({ item, endpoint, open, onClose, onEdit, onDelete }: {
             </div>
           )}
 
-          {/* Flat price (trips, catering, outbound) */}
+          {/* Flat price */}
           {item.price != null && !item.rates?.length && (
             <div className="flex items-center gap-2 text-sm">
               <Tag className="w-4 h-4 text-slate-400" />
@@ -272,22 +321,17 @@ function DetailModal({ item, endpoint, open, onClose, onEdit, onDelete }: {
             </div>
           )}
 
-          {/* Array fields */}
           {(["destinations", "activities", "menu", "facilities", "notes"] as ArrayField[]).map((field) => {
             const arr = item[field];
             if (!arr || !arr.length) return null;
             const labels: Record<ArrayField, string> = {
-              destinations: "Destinasi",
-              activities:   "Aktivitas",
-              menu:         "Menu",
-              facilities:   "Fasilitas",
-              notes:        "Peraturan",
+              destinations: "Destinasi", activities: "Aktivitas",
+              menu: "Menu", facilities: "Fasilitas", notes: "Peraturan",
             };
-            const isNotes = field === "notes";
             return (
               <div key={field}>
                 <h4 className="text-white font-medium text-sm mb-2">{labels[field]}</h4>
-                {isNotes ? (
+                {field === "notes" ? (
                   <ul className="space-y-1">
                     {arr.map((v, i) => (
                       <li key={i} className="text-slate-400 text-sm flex items-start gap-2">
@@ -307,12 +351,9 @@ function DetailModal({ item, endpoint, open, onClose, onEdit, onDelete }: {
           })}
         </div>
 
-        {/* Actions */}
         <div className="flex gap-2 pt-2 border-t border-slate-800">
-          <Button onClick={onEdit}
-            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white h-9">
-            <Pencil className="w-3.5 h-3.5 mr-1.5" />
-            Edit
+          <Button onClick={onEdit} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white h-9">
+            <Pencil className="w-3.5 h-3.5 mr-1.5" />Edit
           </Button>
           <Button onClick={onDelete} variant="outline"
             className="border-red-600/40 text-red-400 hover:bg-red-500/10 h-9 px-3">
@@ -337,7 +378,7 @@ function CatalogModal({ open, onClose, endpoint, item, onSuccess }: {
     if (open) setForm(item ? { ...item } : {});
   }, [open, item]);
 
-  function setField(key: keyof CatalogItem, value: string | number | string[]) {
+  function setField(key: keyof CatalogItem, value: string | number | string[] | Array<{label:string;price:number}>) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -345,15 +386,33 @@ function CatalogModal({ open, onClose, endpoint, item, onSuccess }: {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = item
-        ? await updateCatalog(endpoint, { ...form, id: item.id } as CatalogItem)
-        : await createCatalog(endpoint, form);
-      if (!res.ok) throw new Error();
+      // Strip empty strings and empty arrays before sending
+      const cleaned = Object.fromEntries(
+        Object.entries(form).filter(([, v]) => {
+          if (v === "" || v === undefined || v === null) return false;
+          if (Array.isArray(v) && v.length === 0) return false;
+          return true;
+        })
+      ) as Partial<CatalogItem>;
+
+      let res: Response;
+      if (item) {
+        res = await updateCatalog(endpoint, { ...cleaned, id: item.id } as CatalogItem);
+      } else {
+        res = await createCatalog(endpoint, cleaned);
+      }
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `HTTP ${res.status}`);
+        throw new Error(errText || `HTTP ${res.status}`);
+      }
+
       toast({ title: item ? "Diperbarui" : "Ditambahkan", description: "Data berhasil disimpan" });
       onSuccess();
       onClose();
-    } catch {
-      toast({ title: "Error", description: "Gagal menyimpan data", variant: "destructive" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menyimpan data";
+      toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -370,7 +429,12 @@ function CatalogModal({ open, onClose, endpoint, item, onSuccess }: {
           {FIELDS[endpoint].map((field) => (
             <div key={field.key} className="space-y-1.5">
               <label className="text-slate-400 text-xs font-medium">{field.label}</label>
-              {field.type === "array" ? (
+              {field.type === "rates" ? (
+                <RatesInput
+                  values={(form.rates as Array<{label:string;price:number}>) || []}
+                  onChange={(v) => setField("rates", v)}
+                />
+              ) : field.type === "array" ? (
                 <TagInput
                   values={(form[field.key] as string[]) || []}
                   onChange={(v) => setField(field.key, v)}
@@ -417,13 +481,13 @@ function ItemCard({ item, endpoint, onClick }: {
     endpoint === "catering"   ? item.category :
     endpoint === "outbound"   ? item.category : null;
 
-  const arrField: ArrayField | null =
+  const arrField: ArrayField =
     endpoint === "catering"   ? "menu" :
     endpoint === "trips"      ? "destinations" :
     endpoint === "outbound"   ? "activities" :
     "facilities";
 
-  const arrItems: string[] = (arrField && item[arrField]) ? (item[arrField] as string[]) : [];
+  const arrItems: string[] = item[arrField] ? (item[arrField] as string[]) : [];
 
   const typeColor =
     item.type === "villa"    ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
@@ -439,7 +503,7 @@ function ItemCard({ item, endpoint, onClick }: {
         <div className="aspect-video bg-slate-700 overflow-hidden">
           <img src={item.image} alt={item.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => { (e.target as HTMLImageElement).parentElement!.innerHTML = ""; }} />
+            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
         </div>
       ) : endpoint === "properties" ? (
         <div className="aspect-video bg-slate-700/40 flex items-center justify-center">
@@ -448,7 +512,6 @@ function ItemCard({ item, endpoint, onClick }: {
       ) : null}
 
       <CardContent className="p-3 space-y-2">
-        {/* Name + type badge */}
         <div className="flex items-start justify-between gap-2">
           <p className="text-white font-semibold text-sm leading-tight flex-1 min-w-0 truncate">{item.name}</p>
           {item.type && (
@@ -456,31 +519,20 @@ function ItemCard({ item, endpoint, onClick }: {
           )}
         </div>
 
-        {/* Sub info */}
         {sub && <p className="text-slate-400 text-xs truncate">{sub}</p>}
-
-        {/* Duration */}
         {item.duration && <p className="text-slate-500 text-xs">⏱ {item.duration}</p>}
-
-        {/* Description */}
-        {item.description && !sub && (
+        {item.description && (
           <p className="text-slate-400 text-xs line-clamp-2">{item.description}</p>
         )}
 
-        {/* Price highlight */}
         {mainPrice != null && (
           <div className="flex items-baseline gap-1">
-            <span className="text-slate-500 text-[10px]">
-              {item.rates?.length ? "mulai" : ""}
-            </span>
+            {item.rates?.length ? <span className="text-slate-500 text-[10px]">mulai</span> : null}
             <span className="text-blue-400 font-bold text-sm">{formatRupiah(mainPrice)}</span>
-            {item.rates?.length ? (
-              <span className="text-slate-500 text-[10px]">/ malam</span>
-            ) : null}
+            {item.rates?.length ? <span className="text-slate-500 text-[10px]">/ malam</span> : null}
           </div>
         )}
 
-        {/* Array badges */}
         {arrItems.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {arrItems.slice(0, 3).map((f, i) => (
@@ -505,11 +557,11 @@ export default function KatalogPage() {
   });
   const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
-  const [detailItem, setDetailItem]  = useState<CatalogItem | null>(null);
-  const [editItem,   setEditItem]    = useState<CatalogItem | null>(null);
-  const [formOpen,   setFormOpen]    = useState(false);
-  const [deleteItem, setDeleteItem]  = useState<CatalogItem | null>(null);
-  const [deleting,   setDeleting]    = useState(false);
+  const [detailItem, setDetailItem] = useState<CatalogItem | null>(null);
+  const [editItem,   setEditItem]   = useState<CatalogItem | null>(null);
+  const [formOpen,   setFormOpen]   = useState(false);
+  const [deleteItem, setDeleteItem] = useState<CatalogItem | null>(null);
+  const [deleting,   setDeleting]   = useState(false);
 
   const load = useCallback(async (ep: CatalogEndpoint) => {
     setLoading(true);
@@ -559,7 +611,6 @@ export default function KatalogPage() {
   }
 
   const rawItems = data[activeTab];
-
   const items = activeTab === "properties" && typeFilter !== "all"
     ? rawItems.filter((p) => (p.type || "").toLowerCase() === typeFilter)
     : rawItems;
@@ -581,8 +632,7 @@ export default function KatalogPage() {
           </Button>
           <Button size="sm" onClick={openAdd}
             className="bg-blue-600 hover:bg-blue-500 text-white h-8 px-3">
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            Tambah
+            <Plus className="w-3.5 h-3.5 mr-1" />Tambah
           </Button>
         </div>
       </div>
@@ -607,7 +657,7 @@ export default function KatalogPage() {
       {/* Properties type filter */}
       {activeTab === "properties" && (
         <div className="flex gap-2">
-          {["all", "villa", "glamping"].map((t) => (
+          {(["all", "villa", "glamping"] as const).map((t) => (
             <button key={t} onClick={() => setTypeFilter(t)}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-all capitalize border ${
                 typeFilter === t
@@ -648,26 +698,18 @@ export default function KatalogPage() {
 
       {/* Detail Modal */}
       {detailItem && (
-        <DetailModal
-          open={!!detailItem}
-          item={detailItem}
-          endpoint={activeTab}
+        <DetailModal open={!!detailItem} item={detailItem} endpoint={activeTab}
           onClose={() => setDetailItem(null)}
           onEdit={() => openEdit(detailItem)}
-          onDelete={() => openDelete(detailItem)}
-        />
+          onDelete={() => openDelete(detailItem)} />
       )}
 
-      {/* Add/Edit Form Modal */}
-      <CatalogModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        endpoint={activeTab}
-        item={editItem}
-        onSuccess={() => load(activeTab)}
-      />
+      {/* Form Modal */}
+      <CatalogModal open={formOpen} onClose={() => setFormOpen(false)}
+        endpoint={activeTab} item={editItem}
+        onSuccess={() => load(activeTab)} />
 
-      {/* Delete confirm */}
+      {/* Delete Confirm */}
       <AlertDialog open={!!deleteItem} onOpenChange={() => setDeleteItem(null)}>
         <AlertDialogContent className="bg-slate-900 border-slate-700">
           <AlertDialogHeader>
