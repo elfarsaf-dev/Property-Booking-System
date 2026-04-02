@@ -571,46 +571,42 @@ function ItemCard({ item, endpoint, onClick }: {
       onClick={onClick}
     >
       {item.image ? (
-        <div className="aspect-video bg-slate-700 overflow-hidden">
+        <div className="aspect-[3/2] bg-slate-700 overflow-hidden">
           <img src={item.image} alt={item.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = "none"; }} />
         </div>
       ) : endpoint === "properties" ? (
-        <div className="aspect-video bg-slate-700/40 flex items-center justify-center">
-          <ImageIcon className="w-8 h-8 text-slate-600" />
+        <div className="aspect-[3/2] bg-slate-700/40 flex items-center justify-center">
+          <ImageIcon className="w-6 h-6 text-slate-600" />
         </div>
       ) : null}
 
-      <CardContent className="p-3 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-white font-semibold text-sm leading-tight flex-1 min-w-0 truncate">{item.name}</p>
+      <CardContent className="p-2 space-y-1">
+        <div className="flex items-start justify-between gap-1">
+          <p className="text-white font-semibold text-[11px] leading-tight flex-1 min-w-0 line-clamp-2">{item.name}</p>
           {item.type && (
-            <Badge className={`border text-[10px] shrink-0 capitalize px-1.5 ${typeColor}`}>{item.type}</Badge>
+            <Badge className={`border text-[9px] shrink-0 capitalize px-1 py-0 leading-4 ${typeColor}`}>{item.type}</Badge>
           )}
         </div>
 
-        {sub && <p className="text-slate-400 text-xs truncate">{sub}</p>}
-        {item.duration && <p className="text-slate-500 text-xs">⏱ {item.duration}</p>}
-        {item.description && (
-          <p className="text-slate-400 text-xs line-clamp-2">{item.description}</p>
-        )}
+        {sub && <p className="text-slate-400 text-[10px] truncate">{sub}</p>}
+        {item.duration && <p className="text-slate-500 text-[10px]">⏱ {item.duration}</p>}
 
         {mainPrice != null && (
-          <div className="flex items-baseline gap-1">
-            {item.rates?.length ? <span className="text-slate-500 text-[10px]">mulai</span> : null}
-            <span className="text-blue-400 font-bold text-sm">{formatRupiah(mainPrice)}</span>
-            {item.rates?.length ? <span className="text-slate-500 text-[10px]">/ malam</span> : null}
+          <div className="flex items-baseline gap-0.5">
+            {item.rates?.length ? <span className="text-slate-500 text-[9px]">mulai</span> : null}
+            <span className="text-blue-400 font-bold text-[11px]">{formatRupiah(mainPrice)}</span>
           </div>
         )}
 
         {arrItems.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {arrItems.slice(0, 3).map((f, i) => (
-              <Badge key={i} className="bg-slate-700 text-slate-300 border-slate-600 text-[10px] font-normal px-1.5">{f}</Badge>
+          <div className="flex flex-wrap gap-0.5">
+            {arrItems.slice(0, 2).map((f, i) => (
+              <Badge key={i} className="bg-slate-700 text-slate-300 border-slate-600 text-[9px] font-normal px-1 py-0 leading-4">{f}</Badge>
             ))}
-            {arrItems.length > 3 && (
-              <Badge className="bg-slate-700/60 text-slate-500 border-slate-700 text-[10px] font-normal px-1.5">+{arrItems.length - 3}</Badge>
+            {arrItems.length > 2 && (
+              <Badge className="bg-slate-700/60 text-slate-500 border-slate-700 text-[9px] font-normal px-1 py-0 leading-4">+{arrItems.length - 2}</Badge>
             )}
           </div>
         )}
@@ -695,44 +691,44 @@ export default function KatalogPage() {
   const currentTab = TABS.find((t) => t.key === activeTab)!;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">Katalog</h1>
-          <p className="text-slate-400 text-sm">{items.length} item · {currentTab.label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-base font-bold text-white leading-tight">Katalog</h1>
+          <p className="text-slate-400 text-xs">{items.length} item · {currentTab.label}</p>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
+        <div className="flex gap-1.5 shrink-0">
           <Button size="sm" variant="outline" onClick={() => load(activeTab)}
-            className="border-slate-600 text-slate-300 hover:bg-slate-800 h-8 px-2.5">
-            <RefreshCw className="w-3.5 h-3.5" />
+            className="border-slate-600 text-slate-300 hover:bg-slate-800 h-7 w-7 p-0">
+            <RefreshCw className="w-3 h-3" />
           </Button>
           {activeTab !== "properties" && items.length > 0 && (
             <Button size="sm" variant="outline"
               onClick={() => exportCatalogToXLSX(activeTab, items)}
-              className="border-emerald-600/50 text-emerald-400 hover:bg-emerald-600/10 h-8 px-2.5 gap-1.5">
-              <FileDown className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export</span>
+              className="border-emerald-600/50 text-emerald-400 hover:bg-emerald-600/10 h-7 px-2 gap-1 text-[10px]">
+              <FileDown className="w-3 h-3" />
+              Export
             </Button>
           )}
           <Button size="sm" onClick={openAdd}
-            className="bg-blue-600 hover:bg-blue-500 text-white h-8 px-3">
-            <Plus className="w-3.5 h-3.5 mr-1" />Tambah
+            className="bg-blue-600 hover:bg-blue-500 text-white h-7 px-2 text-[10px] gap-1">
+            <Plus className="w-3 h-3" />Tambah
           </Button>
         </div>
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1.5 bg-slate-800/50 rounded-xl p-1 overflow-x-auto">
+      <div className="flex gap-1 bg-slate-800/50 rounded-lg p-0.5 overflow-x-auto">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
           return (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 justify-center ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap flex-1 justify-center ${
                 active ? TAB_ACTIVE[tab.color] : "text-slate-400 hover:text-white hover:bg-slate-800"
               }`}>
-              <Icon className="w-3.5 h-3.5" />
+              <Icon className="w-3 h-3 shrink-0" />
               {tab.label}
             </button>
           );
@@ -741,21 +737,21 @@ export default function KatalogPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={`Cari nama ${currentTab.label.toLowerCase()}...`}
-          className="bg-slate-800 border-slate-600 text-white text-sm h-8 pl-8"
+          placeholder={`Cari ${currentTab.label.toLowerCase()}...`}
+          className="bg-slate-800 border-slate-600 text-white text-xs h-7 pl-7"
         />
       </div>
 
       {/* Properties type filter */}
       {activeTab === "properties" && (
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {(["all", "villa", "glamping"] as const).map((t) => (
             <button key={t} onClick={() => setTypeFilter(t)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all capitalize border ${
+              className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all capitalize border ${
                 typeFilter === t
                   ? t === "villa"    ? "bg-blue-600/20 text-blue-400 border-blue-500/40"
                   : t === "glamping" ? "bg-emerald-600/20 text-emerald-400 border-emerald-500/40"
@@ -784,7 +780,7 @@ export default function KatalogPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
           {items.map((item) => (
             <ItemCard key={item.id} item={item} endpoint={activeTab}
               onClick={() => setDetailItem(item)} />

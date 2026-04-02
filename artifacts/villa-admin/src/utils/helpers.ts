@@ -218,10 +218,11 @@ function buildStyledSheet(
     });
   }
 
-  // ── Data rows, grouped by property ───────────────────────────────
+  // ── Data rows, grouped by category (or property for "Properti") ──
   const propMap = new Map<string, Reservation[]>();
   for (const r of data) {
-    const key = r.property_name?.trim() || "Tanpa Properti";
+    const cat = getBookingCategoryLabel(r.property_id);
+    const key = cat === "Properti" ? (r.property_name?.trim() || "Tanpa Properti") : cat;
     if (!propMap.has(key)) propMap.set(key, []);
     propMap.get(key)!.push(r);
   }
@@ -243,8 +244,10 @@ function buildStyledSheet(
     const subSisa  = subHarga - subDP;
     const subMalam = propRows.reduce((s, r) => s + getNights(r.checkin, r.checkout), 0);
 
-    // Property group header
-    const ph = ws.addRow([`🏠 ${propName}`, ...Array(NC - 1).fill("")]);
+    // Category/Property group header
+    const catLbl = getBookingCategoryLabel(propRows[0].property_id);
+    const grpIcon = catLbl === "Properti" ? "🏠" : catLbl === "Trips" ? "✈️" : catLbl === "Catering" ? "🍽️" : "🏃";
+    const ph = ws.addRow([`${grpIcon} ${propName}`, ...Array(NC - 1).fill("")]);
     ph.height = 22;
     ws.mergeCells(ph.number, 1, ph.number, NC);
     styleCell(ph.getCell(1), {
@@ -369,18 +372,18 @@ export async function exportToXLSX(
   const ws1 = wb.addWorksheet(sheet1Name);
   buildStyledSheet(ws1, data, `Laporan Reservasi — ${period}`, adminName, period, true);
 
-  // ── Sheet 2+: One sheet per property ─────────────────────────────
-  const propMap = new Map<string, Reservation[]>();
+  // ── Sheet 2+: One sheet per category ────────────────────────────
+  const catMap = new Map<string, Reservation[]>();
   for (const r of data) {
-    const key = r.property_name?.trim() || "Tanpa Properti";
-    if (!propMap.has(key)) propMap.set(key, []);
-    propMap.get(key)!.push(r);
+    const cat = getBookingCategoryLabel(r.property_id);
+    if (!catMap.has(cat)) catMap.set(cat, []);
+    catMap.get(cat)!.push(r);
   }
 
-  for (const [propName, propRows] of propMap) {
-    const sheetName = propName.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
+  for (const [catName, catRows] of catMap) {
+    const sheetName = catName.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
     const ws = wb.addWorksheet(sheetName);
-    buildStyledSheet(ws, propRows, `${propName} — ${period}`, adminName, period, false);
+    buildStyledSheet(ws, catRows, `${catName} — ${period}`, adminName, period, true);
   }
 
   // Download
@@ -574,7 +577,8 @@ export function exportToPDF(
 
   const propMap = new Map<string, Reservation[]>();
   for (const r of data) {
-    const key = r.property_name?.trim() || "Tanpa Properti";
+    const cat = getBookingCategoryLabel(r.property_id);
+    const key = cat === "Properti" ? (r.property_name?.trim() || "Tanpa Properti") : cat;
     if (!propMap.has(key)) propMap.set(key, []);
     propMap.get(key)!.push(r);
   }
@@ -633,7 +637,7 @@ export function exportToPDF(
     return `
       <tr>
         <td colspan="11" style="background:${pc.bg};border-left:4px solid ${pc.border};border-top:2px solid ${pc.border}22;border-bottom:1px solid ${pc.border}44;padding:6px 10px;color:${pc.text};font-weight:800;font-size:10px">
-          🏠 ${propName}
+          ${(()=>{const c=getBookingCategoryLabel(propRows[0].property_id);return c==="Properti"?"🏠":c==="Trips"?"✈️":c==="Catering"?"🍽️":"🏃";})() } ${propName}
           <span style="font-weight:400;font-size:8.5px;opacity:0.8;margin-left:8px">${propRows.length} booking · ${subMalam} malam</span>
         </td>
       </tr>
