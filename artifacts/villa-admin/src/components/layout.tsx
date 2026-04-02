@@ -9,7 +9,6 @@ import {
   MessageCircle,
   User,
   LogOut,
-  ShieldCheck,
 } from "lucide-react";
 
 const NAV_BASE = [
@@ -49,15 +48,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-60 flex-col bg-slate-900 border-r border-slate-800 fixed h-full z-20">
         <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-            superAdmin ? "bg-amber-500/20 border border-amber-400/30" : "bg-blue-500/20 border border-blue-400/30"
-          }`}>
-            {superAdmin
-              ? <ShieldCheck className="w-4 h-4 text-amber-400" />
-              : <Building2 className="w-4 h-4 text-blue-400" />}
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-slate-700/50 shrink-0">
+            <img src="https://raw.githubusercontent.com/elfarsaf-dev/lawuscape/main/uploads/1775130099890-12129.jpg"
+              alt="E-Rekap" className="w-full h-full object-cover" />
           </div>
           <div>
-            <p className="text-white font-semibold text-sm">Villa Admin</p>
+            <p className="text-white font-semibold text-sm">E-Rekap</p>
             <p className={`text-xs capitalize ${superAdmin ? "text-amber-400 font-medium" : "text-slate-400"}`}>
               {adminName} {superAdmin && "✦"}
             </p>
@@ -109,10 +105,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/60 flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
-          {superAdmin
-            ? <ShieldCheck className="w-5 h-5 text-amber-400" />
-            : <Building2 className="w-5 h-5 text-blue-400" />}
-          <span className="text-white font-semibold text-sm">Villa Admin</span>
+          <div className="w-6 h-6 rounded overflow-hidden border border-slate-700/50 shrink-0">
+            <img src="https://raw.githubusercontent.com/elfarsaf-dev/lawuscape/main/uploads/1775130099890-12129.jpg"
+              alt="E-Rekap" className="w-full h-full object-cover" />
+          </div>
+          <span className="text-white font-semibold text-sm">E-Rekap</span>
           {superAdmin && (
             <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-400/30 rounded-full px-2 py-0.5 font-medium">
               Super

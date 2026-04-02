@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Eye, EyeOff, AlertCircle, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, ShieldCheck } from "lucide-react";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -46,10 +46,11 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center mb-4">
-            <Building2 className="w-8 h-8 text-blue-400" />
+          <div className="w-16 h-16 rounded-2xl overflow-hidden mb-4 border border-slate-700/50">
+            <img src="https://raw.githubusercontent.com/elfarsaf-dev/lawuscape/main/uploads/1775130099890-12129.jpg"
+              alt="E-Rekap" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Villa Admin Panel</h1>
+          <h1 className="text-2xl font-bold text-white">E-Rekap</h1>
           <p className="text-slate-400 text-sm mt-1">Kelola reservasi properti Anda</p>
         </div>
         <Card className="border-slate-700/50 bg-slate-800/60 backdrop-blur-sm shadow-2xl">

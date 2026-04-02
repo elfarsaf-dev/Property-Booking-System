@@ -364,7 +364,7 @@ export async function exportToXLSX(
 
   const period = getMonthLabel(filterMonth, filterYear);
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Villa Booking Admin";
+  wb.creator = "E-Rekap";
   wb.created = new Date();
 
   // ── Sheet 1: Full data (all properties together), named after period ──
@@ -527,7 +527,7 @@ export async function exportCatalogToXLSX(
   const now = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Villa Booking Admin";
+  wb.creator = "E-Rekap";
   wb.created = new Date();
 
   // Group by category
@@ -758,7 +758,7 @@ td{padding:5px 7px;font-size:8.5px;vertical-align:middle;border-bottom:1px solid
   </tr>
 </table>
 </div>
-<div class="report-footer">Dokumen ini digenerate otomatis oleh Villa Booking Admin Panel &nbsp;·&nbsp; ${now}</div>
+<div class="report-footer">Dokumen ini digenerate otomatis oleh E-Rekap &nbsp;·&nbsp; ${now}</div>
 </div></body></html>`;
 
   const win = window.open("", "_blank");
