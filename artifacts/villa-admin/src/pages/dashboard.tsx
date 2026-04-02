@@ -7,7 +7,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
@@ -194,15 +194,18 @@ export default function DashboardPage() {
 
   /* ── Chart data from filtered ── */
   const lineData = useMemo(() => {
-    const perHari: Record<string, number> = {};
+    const perHari: Record<string, { omset: number; pending: number; cancel: number }> = {};
     for (const r of filtered) {
-      if (r.status === "lunas") {
-        const date = r.checkin?.slice(0, 10) || "";
-        if (date) perHari[date] = (perHari[date] || 0) + r.total_price;
-      }
+      const date = r.checkin?.slice(0, 10) || "";
+      if (!date) continue;
+      if (!perHari[date]) perHari[date] = { omset: 0, pending: 0, cancel: 0 };
+      if (r.status === "lunas")   perHari[date].omset   += r.total_price ?? 0;
+      if (r.status === "pending") perHari[date].pending += r.total_price ?? 0;
+      if (r.status === "cancel")  perHari[date].cancel  += r.total_price ?? 0;
     }
-    const sorted = Object.entries(perHari).sort(([a], [b]) => a.localeCompare(b));
-    return sorted.map(([date, nominal]) => ({ tanggal: date.slice(5), nominal }));
+    return Object.entries(perHari)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({ tanggal: date.slice(5), ...v }));
   }, [filtered]);
 
   const pieData = useMemo(() => {
@@ -313,26 +316,37 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2 bg-slate-800/60 border-slate-700/50">
           <CardHeader className="pb-2">
             <CardTitle className="text-white text-sm font-semibold">
-              Omset Lunas — {periodLabel}
+              Tren Booking — {periodLabel}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {lineData.length === 0 ? (
-              <p className="text-slate-500 text-sm text-center py-8">Belum ada data lunas</p>
+              <p className="text-slate-500 text-sm text-center py-8">Belum ada data</p>
             ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={lineData}>
-                  <XAxis dataKey="tanggal" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={lineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="tanggal" tick={{ fill: "#64748b", fontSize: 10 }} />
                   <YAxis
-                    tick={{ fill: "#94a3b8", fontSize: 11 }}
-                    tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`}
+                    tick={{ fill: "#64748b", fontSize: 10 }}
+                    tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}jt` : v >= 1000 ? `${(v / 1000).toFixed(0)}rb` : String(v)}
+                    width={42}
                   />
                   <Tooltip
-                    contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8 }}
+                    contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8, fontSize: 12 }}
                     labelStyle={{ color: "#94a3b8" }}
-                    formatter={(v: number) => [formatRupiah(v), "Omset"]}
+                    formatter={(v: number, name: string) => {
+                      const label = name === "omset" ? "Omset" : name === "pending" ? "Pending" : "Cancel";
+                      return [formatRupiah(v), label];
+                    }}
                   />
-                  <Line type="monotone" dataKey="nominal" stroke={superAdmin ? "#f59e0b" : "#3b82f6"} strokeWidth={2} dot={{ r: 3 }} />
+                  <Legend
+                    formatter={(value) => value === "omset" ? "Omset" : value === "pending" ? "Pending" : "Cancel"}
+                    wrapperStyle={{ fontSize: 11, color: "#94a3b8" }}
+                  />
+                  <Line type="monotone" dataKey="omset"   stroke="#22c55e" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="pending" stroke="#f97316" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="cancel"  stroke="#ef4444" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
