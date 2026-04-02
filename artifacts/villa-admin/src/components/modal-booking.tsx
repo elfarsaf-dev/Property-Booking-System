@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -31,7 +31,7 @@ import {
 } from "@/services/api";
 import { formatRupiah, formatDate, getNights, getStatusColor, getStatusLabel } from "@/utils/helpers";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2, Edit2, X } from "lucide-react";
+import { Loader2, Trash2, Edit2, X, Search, ChevronDown } from "lucide-react";
 
 const schema = z.object({
   guest_name: z.string().min(1, "Nama tamu wajib diisi"),
@@ -95,6 +95,19 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
   const [properties, setProperties] = useState<Property[]>([]);
   const [filterType, setFilterType] = useState<"all" | "villa" | "glamping">("all");
   const [filterLocation, setFilterLocation] = useState("all");
+  const [propSearch, setPropSearch] = useState("");
+  const [propOpen, setPropOpen] = useState(false);
+  const propRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (propRef.current && !propRef.current.contains(e.target as Node)) {
+        setPropOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   useEffect(() => { setMode(initialMode); }, [initialMode, open]);
 
@@ -137,6 +150,10 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
       setFilterType("all");
       setFilterLocation("all");
     }
+    if (!open) {
+      setPropSearch("");
+      setPropOpen(false);
+    }
   }, [reservation, open]);
 
   const locations = useMemo(() => {
@@ -151,6 +168,12 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
       return matchType && matchLoc;
     });
   }, [properties, filterType, filterLocation]);
+
+  const searchedProperties = useMemo(() => {
+    if (!propSearch.trim()) return filteredProperties;
+    const q = propSearch.toLowerCase();
+    return filteredProperties.filter((p) => p.name.toLowerCase().includes(q));
+  }, [filteredProperties, propSearch]);
 
   function handlePropertyChange(id: string) {
     if (id === "__manual__") {
@@ -355,32 +378,95 @@ export default function ModalBooking({ open, onClose, reservation, onSuccess, on
                     </Select>
                   </div>
                 )}
-                <Select
-                  disabled={isReadonly}
-                  value={form.watch("property_id")}
-                  onValueChange={handlePropertyChange}
-                >
-                  <SelectTrigger className="bg-slate-800 border-slate-600 text-white text-sm h-10">
-                    <SelectValue placeholder="Pilih properti..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 max-h-52">
-                    {filteredProperties.map((p) => (
-                      <SelectItem key={p.id} value={p.id} className="text-white hover:bg-slate-700">
-                        <span className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-                            p.type === "villa" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"
-                          }`}>{p.type}</span>
-                          <span>{p.name}</span>
-                          {p.location && <span className="text-slate-400 text-xs">· {p.location}</span>}
-                          {p.rates?.[0] && <span className="text-slate-500 text-xs">· {formatRupiah(p.rates[0].price)}</span>}
-                        </span>
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__manual__" className="text-slate-400">
-                      ✏️ Input Manual
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                {isReadonly ? (
+                  <div className="bg-slate-800 border border-slate-600 rounded-md h-10 px-3 flex items-center text-white text-sm">
+                    {form.watch("property_name") || "-"}
+                  </div>
+                ) : (
+                  <div ref={propRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setPropOpen((v) => !v)}
+                      className="w-full flex items-center justify-between bg-slate-800 border border-slate-600 rounded-md h-10 px-3 text-sm hover:border-slate-500 transition-colors"
+                    >
+                      {(() => {
+                        const id = form.watch("property_id");
+                        if (!id || id === "__manual__") return <span className="text-slate-400">Pilih properti...</span>;
+                        const prop = properties.find((p) => p.id === id);
+                        return (
+                          <span className="flex items-center gap-2">
+                            {prop && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                                prop.type === "villa" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"
+                              }`}>{prop.type}</span>
+                            )}
+                            <span className="text-white">{prop?.name ?? form.watch("property_name")}</span>
+                          </span>
+                        );
+                      })()}
+                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${propOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {propOpen && (
+                      <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-2xl">
+                        <div className="p-2">
+                          <div className="flex items-center gap-2 bg-slate-700 border border-slate-600 rounded-md px-2 focus-within:border-blue-500 transition-colors">
+                            <Search className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <input
+                              type="text"
+                              value={propSearch}
+                              onChange={(e) => setPropSearch(e.target.value)}
+                              placeholder="Cari nama properti..."
+                              className="flex-1 bg-transparent text-white text-sm py-1.5 outline-none placeholder:text-slate-500"
+                              autoFocus
+                            />
+                            {propSearch && (
+                              <button type="button" onClick={() => setPropSearch("")} className="text-slate-500 hover:text-slate-300">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="max-h-52 overflow-y-auto">
+                          {searchedProperties.length === 0 ? (
+                            <div className="px-3 py-4 text-slate-500 text-sm text-center">
+                              Properti tidak ditemukan
+                            </div>
+                          ) : (
+                            searchedProperties.map((p) => (
+                              <div
+                                key={p.id}
+                                onMouseDown={() => {
+                                  handlePropertyChange(p.id);
+                                  setPropOpen(false);
+                                  setPropSearch("");
+                                }}
+                                className="px-3 py-2.5 hover:bg-slate-700 cursor-pointer flex items-center gap-2 flex-wrap border-b border-slate-700/50 last:border-0"
+                              >
+                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
+                                  p.type === "villa" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"
+                                }`}>{p.type}</span>
+                                <span className="text-white text-sm font-medium">{p.name}</span>
+                                {p.location && <span className="text-slate-400 text-xs">· {p.location}</span>}
+                                {p.rates?.[0] && <span className="text-slate-500 text-xs">· {formatRupiah(p.rates[0].price)}</span>}
+                              </div>
+                            ))
+                          )}
+                          <div
+                            onMouseDown={() => {
+                              handlePropertyChange("__manual__");
+                              setPropOpen(false);
+                              setPropSearch("");
+                            }}
+                            className="px-3 py-2.5 hover:bg-slate-700 cursor-pointer text-slate-400 text-sm border-t border-slate-700 flex items-center gap-2"
+                          >
+                            ✏️ <span>Input Manual</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {form.watch("property_id") === "__manual__" && (
                   <Input
                     {...form.register("property_name")}

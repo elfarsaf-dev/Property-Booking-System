@@ -4,6 +4,13 @@ import { formatRupiah, formatDate, getStatusColor, getStatusLabel } from "@/util
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   LineChart,
   Line,
   XAxis,
@@ -25,7 +32,19 @@ import {
   ChevronDown,
   ChevronUp,
   ShieldCheck,
+  SlidersHorizontal,
 } from "lucide-react";
+
+const MONTHS_ID = [
+  "Januari","Februari","Maret","April","Mei","Juni",
+  "Juli","Agustus","September","Oktober","November","Desember",
+];
+
+const PIE_COLORS = [
+  "#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4",
+  "#ec4899","#f97316","#84cc16","#a855f7","#14b8a6","#eab308",
+  "#64748b","#dc2626","#7c3aed","#059669",
+];
 
 function StatCard({
   icon: Icon,
@@ -55,7 +74,6 @@ function StatCard({
   );
 }
 
-const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
 function AdminGroup({ adminName, reservations }: { adminName: string; reservations: Reservation[] }) {
   const [open, setOpen] = useState(false);
@@ -135,6 +153,8 @@ export default function DashboardPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [chartMonth, setChartMonth] = useState("all");
+  const [chartYear, setChartYear] = useState("all");
   const superAdmin = isSuperAdmin();
   const adminName = getAdminName();
 
@@ -170,30 +190,56 @@ export default function DashboardPage() {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 8);
 
-  const perHari: Record<string, number> = {};
-  for (const r of myReservations) {
-    if (r.status === "lunas") {
-      const date = r.checkin?.slice(0, 10) || "";
-      perHari[date] = (perHari[date] || 0) + r.total_price;
-    }
-  }
-  const lineData = Object.entries(perHari)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-14)
-    .map(([date, nominal]) => ({ tanggal: date.slice(5), nominal }));
+  const chartYears = useMemo(() => {
+    const yrs = new Set(
+      myReservations
+        .map((r) => r.checkin ? new Date(r.checkin).getFullYear().toString() : null)
+        .filter(Boolean) as string[]
+    );
+    return [...yrs].sort().reverse();
+  }, [myReservations]);
 
-  const villaCount = myReservations.filter((r) =>
-    r.property_id?.includes("villa") || r.property_name?.toLowerCase().includes("villa")
-  ).length;
-  const glampingCount = myReservations.filter((r) =>
-    r.property_id?.includes("glamping") || r.property_name?.toLowerCase().includes("glamping")
-  ).length;
-  const otherCount = total - villaCount - glampingCount;
-  const pieData = [
-    { name: "Villa", value: villaCount },
-    { name: "Glamping", value: glampingCount },
-    ...(otherCount > 0 ? [{ name: "Lainnya", value: otherCount }] : []),
-  ].filter((d) => d.value > 0);
+  const chartReservations = useMemo(() => {
+    return myReservations.filter((r) => {
+      const d = r.checkin ? new Date(r.checkin) : null;
+      if (!d) return true;
+      if (chartMonth !== "all" && (d.getMonth() + 1).toString() !== chartMonth) return false;
+      if (chartYear !== "all" && d.getFullYear().toString() !== chartYear) return false;
+      return true;
+    });
+  }, [myReservations, chartMonth, chartYear]);
+
+  const lineData = useMemo(() => {
+    const perHari: Record<string, number> = {};
+    for (const r of chartReservations) {
+      if (r.status === "lunas") {
+        const date = r.checkin?.slice(0, 10) || "";
+        if (date) perHari[date] = (perHari[date] || 0) + r.total_price;
+      }
+    }
+    const sorted = Object.entries(perHari).sort(([a], [b]) => a.localeCompare(b));
+    const sliced = chartMonth !== "all" || chartYear !== "all" ? sorted : sorted.slice(-30);
+    return sliced.map(([date, nominal]) => ({ tanggal: date.slice(5), nominal }));
+  }, [chartReservations, chartMonth, chartYear]);
+
+  const pieData = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of chartReservations) {
+      const key = r.property_name?.trim() || "Tanpa Properti";
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, value]) => ({ name, value }));
+  }, [chartReservations]);
+
+  const chartPeriodLabel = useMemo(() => {
+    if (chartMonth !== "all" && chartYear !== "all")
+      return `${MONTHS_ID[parseInt(chartMonth) - 1]} ${chartYear}`;
+    if (chartMonth !== "all") return MONTHS_ID[parseInt(chartMonth) - 1];
+    if (chartYear !== "all") return `Tahun ${chartYear}`;
+    return "Semua Periode";
+  }, [chartMonth, chartYear]);
 
   if (loading) {
     return (
@@ -251,69 +297,111 @@ export default function DashboardPage() {
       )}
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2 bg-slate-800/60 border-slate-700/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm font-semibold">
-              Omset 14 Hari Terakhir {superAdmin ? "(Semua Admin)" : `(${adminName})`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {lineData.length === 0 ? (
-              <p className="text-slate-500 text-sm text-center py-8">Belum ada data lunas</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={lineData}>
-                  <XAxis dataKey="tanggal" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                  <YAxis
-                    tick={{ fill: "#94a3b8", fontSize: 11 }}
-                    tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`}
-                  />
-                  <Tooltip
-                    contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8 }}
-                    labelStyle={{ color: "#94a3b8" }}
-                    formatter={(v: number) => [formatRupiah(v), "Omset"]}
-                  />
-                  <Line type="monotone" dataKey="nominal" stroke={superAdmin ? "#f59e0b" : "#3b82f6"} strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+      <div className="space-y-3">
+        {/* Chart filter bar */}
+        <div className="flex items-center gap-2 flex-wrap bg-slate-800/40 border border-slate-700/50 rounded-xl px-3 py-2">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+          <span className="text-slate-400 text-xs font-medium">Filter Grafik:</span>
+          <Select value={chartMonth} onValueChange={setChartMonth}>
+            <SelectTrigger className="h-8 w-36 bg-slate-800 border-slate-600 text-white text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="all" className="text-white text-xs">Semua Bulan</SelectItem>
+              {MONTHS_ID.map((m, i) => (
+                <SelectItem key={i} value={String(i + 1)} className="text-white text-xs">{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={chartYear} onValueChange={setChartYear}>
+            <SelectTrigger className="h-8 w-28 bg-slate-800 border-slate-600 text-white text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="all" className="text-white text-xs">Semua Tahun</SelectItem>
+              {chartYears.map((y) => (
+                <SelectItem key={y} value={y} className="text-white text-xs">{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-slate-500 text-xs ml-1">
+            {chartReservations.length} booking · {chartPeriodLabel}
+          </span>
+        </div>
 
-        <Card className="bg-slate-800/60 border-slate-700/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm font-semibold">Tipe Properti</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pieData.length === 0 ? (
-              <p className="text-slate-500 text-sm text-center py-8">Belum ada data</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    dataKey="value"
-                    paddingAngle={3}
-                  >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Legend formatter={(value) => <span style={{ color: "#94a3b8", fontSize: 12 }}>{value}</span>} />
-                  <Tooltip
-                    contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8 }}
-                    labelStyle={{ color: "#94a3b8" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card className="lg:col-span-2 bg-slate-800/60 border-slate-700/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white text-sm font-semibold">
+                Omset Lunas — {chartPeriodLabel}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {lineData.length === 0 ? (
+                <p className="text-slate-500 text-sm text-center py-8">Belum ada data lunas</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={lineData}>
+                    <XAxis dataKey="tanggal" tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                    <YAxis
+                      tick={{ fill: "#94a3b8", fontSize: 11 }}
+                      tickFormatter={(v) => `${(v / 1000000).toFixed(1)}jt`}
+                    />
+                    <Tooltip
+                      contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8 }}
+                      labelStyle={{ color: "#94a3b8" }}
+                      formatter={(v: number) => [formatRupiah(v), "Omset"]}
+                    />
+                    <Line type="monotone" dataKey="nominal" stroke={superAdmin ? "#f59e0b" : "#3b82f6"} strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-800/60 border-slate-700/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-white text-sm font-semibold">
+                Booking per Properti
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pieData.length === 0 ? (
+                <p className="text-slate-500 text-sm text-center py-8">Belum ada data</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="42%"
+                      innerRadius={45}
+                      outerRadius={72}
+                      dataKey="value"
+                      paddingAngle={2}
+                    >
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Legend
+                      formatter={(value) => (
+                        <span style={{ color: "#94a3b8", fontSize: 10 }}>
+                          {value.length > 18 ? value.slice(0, 18) + "…" : value}
+                        </span>
+                      )}
+                    />
+                    <Tooltip
+                      contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 8 }}
+                      labelStyle={{ color: "#94a3b8" }}
+                      formatter={(v: number, name: string) => [`${v} booking`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Recent */}
