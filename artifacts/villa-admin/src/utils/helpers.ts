@@ -372,18 +372,26 @@ export async function exportToXLSX(
   const ws1 = wb.addWorksheet(sheet1Name);
   buildStyledSheet(ws1, data, `Laporan Reservasi — ${period}`, adminName, period, true);
 
-  // ── Sheet 2+: One sheet per category ────────────────────────────
-  const catMap = new Map<string, Reservation[]>();
-  for (const r of data) {
-    const cat = getBookingCategoryLabel(r.property_id);
-    if (!catMap.has(cat)) catMap.set(cat, []);
-    catMap.get(cat)!.push(r);
+  // ── Sheet 2+: One sheet per property name (Properti only) ───────
+  const propertiRows = data.filter((r) => getBookingCategoryLabel(r.property_id) === "Properti");
+  const propNameMap = new Map<string, Reservation[]>();
+  for (const r of propertiRows) {
+    const key = r.property_name?.trim() || "Tanpa Properti";
+    if (!propNameMap.has(key)) propNameMap.set(key, []);
+    propNameMap.get(key)!.push(r);
+  }
+  for (const [propName, propRows] of propNameMap) {
+    const sheetName = propName.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
+    const ws = wb.addWorksheet(sheetName);
+    buildStyledSheet(ws, propRows, `${propName} — ${period}`, adminName, period, false);
   }
 
-  for (const [catName, catRows] of catMap) {
-    const sheetName = catName.replace(/[:\\/?*[\]]/g, "").slice(0, 31);
-    const ws = wb.addWorksheet(sheetName);
-    buildStyledSheet(ws, catRows, `${catName} — ${period}`, adminName, period, true);
+  // ── Sheet last: Trips / Catering / Outbound (one sheet each) ────
+  for (const cat of ["Trips", "Catering", "Outbound"] as const) {
+    const catRows = data.filter((r) => getBookingCategoryLabel(r.property_id) === cat);
+    if (!catRows.length) continue;
+    const ws = wb.addWorksheet(cat);
+    buildStyledSheet(ws, catRows, `${cat} — ${period}`, adminName, period, true);
   }
 
   // Download
