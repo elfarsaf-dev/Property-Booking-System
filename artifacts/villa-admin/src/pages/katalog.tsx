@@ -41,16 +41,27 @@ import {
   Bike,
   X,
   Image as ImageIcon,
+  Users,
+  ChevronLeft,
+  ChevronRight,
+  Tag,
 } from "lucide-react";
 
 type Tab = { key: CatalogEndpoint; label: string; icon: React.ElementType; color: string };
 
 const TABS: Tab[] = [
-  { key: "properties", label: "Properties", icon: Building2, color: "blue" },
-  { key: "trips",      label: "Trips",      icon: MapPin,         color: "emerald" },
+  { key: "properties", label: "Properties", icon: Building2,       color: "blue" },
+  { key: "trips",      label: "Trips",      icon: MapPin,          color: "emerald" },
   { key: "catering",   label: "Catering",   icon: UtensilsCrossed, color: "orange" },
-  { key: "outbound",   label: "Outbound",   icon: Bike,           color: "violet" },
+  { key: "outbound",   label: "Outbound",   icon: Bike,            color: "violet" },
 ];
+
+const TAB_ACTIVE: Record<string, string> = {
+  blue:    "bg-blue-600 text-white",
+  emerald: "bg-emerald-600 text-white",
+  orange:  "bg-orange-600 text-white",
+  violet:  "bg-violet-600 text-white",
+};
 
 type ArrayField = "facilities" | "menu" | "activities" | "destinations" | "notes";
 
@@ -63,86 +74,69 @@ interface FieldDef {
 
 const FIELDS: Record<CatalogEndpoint, FieldDef[]> = {
   properties: [
-    { key: "name",       label: "Nama",      placeholder: "Nama properti" },
-    { key: "location",   label: "Lokasi",    placeholder: "Lokasi properti" },
-    { key: "price",      label: "Harga",     type: "number", placeholder: "Harga per malam" },
-    { key: "image",      label: "URL Gambar",type: "url",    placeholder: "https://..." },
-    { key: "facilities", label: "Fasilitas", type: "array",  placeholder: "Tambah fasilitas..." },
+    { key: "name",       label: "Nama",       placeholder: "Nama properti" },
+    { key: "location",   label: "Lokasi",     placeholder: "Lokasi properti" },
+    { key: "type",       label: "Tipe",       placeholder: "villa / glamping" },
+    { key: "price",      label: "Harga",      type: "number", placeholder: "Harga dasar" },
+    { key: "capacity",   label: "Kapasitas",  placeholder: "Contoh: 20 orang" },
+    { key: "image",      label: "URL Gambar", type: "url", placeholder: "https://..." },
+    { key: "facilities", label: "Fasilitas",  type: "array", placeholder: "Tambah fasilitas..." },
+    { key: "notes",      label: "Peraturan",  type: "array", placeholder: "Tambah peraturan..." },
   ],
   trips: [
     { key: "name",         label: "Nama",       placeholder: "Nama trip" },
     { key: "category",     label: "Kategori",   placeholder: "Contoh: Adventure" },
     { key: "price",        label: "Harga",      type: "number", placeholder: "Harga per orang" },
-    { key: "destinations", label: "Destinasi",  type: "array",  placeholder: "Tambah destinasi..." },
-    { key: "facilities",   label: "Fasilitas",  type: "array",  placeholder: "Tambah fasilitas..." },
-    { key: "notes",        label: "Catatan",    type: "array",  placeholder: "Tambah catatan..." },
+    { key: "destinations", label: "Destinasi",  type: "array", placeholder: "Tambah destinasi..." },
+    { key: "facilities",   label: "Fasilitas",  type: "array", placeholder: "Tambah fasilitas..." },
+    { key: "notes",        label: "Catatan",    type: "array", placeholder: "Tambah catatan..." },
   ],
   catering: [
-    { key: "name",        label: "Nama",      placeholder: "Nama paket catering" },
-    { key: "category",    label: "Kategori",  placeholder: "Contoh: Prasmanan" },
-    { key: "price",       label: "Harga",     type: "number", placeholder: "Harga per porsi/paket" },
-    { key: "description", label: "Deskripsi", placeholder: "Deskripsi singkat" },
-    { key: "menu",        label: "Menu",      type: "array",  placeholder: "Tambah menu..." },
+    { key: "name",        label: "Nama",       placeholder: "Nama paket catering" },
+    { key: "category",    label: "Kategori",   placeholder: "Contoh: Prasmanan" },
+    { key: "price",       label: "Harga",      type: "number", placeholder: "Harga per porsi/paket" },
+    { key: "description", label: "Deskripsi",  placeholder: "Deskripsi singkat" },
+    { key: "menu",        label: "Menu",       type: "array", placeholder: "Tambah menu..." },
   ],
   outbound: [
-    { key: "name",       label: "Nama",      placeholder: "Nama paket outbound" },
-    { key: "category",   label: "Kategori",  placeholder: "Contoh: Team Building" },
-    { key: "price",      label: "Harga",     type: "number", placeholder: "Harga per orang" },
-    { key: "duration",   label: "Durasi",    placeholder: "Contoh: 2 jam" },
-    { key: "activities", label: "Aktivitas", type: "array",  placeholder: "Tambah aktivitas..." },
-    { key: "facilities", label: "Fasilitas", type: "array",  placeholder: "Tambah fasilitas..." },
+    { key: "name",       label: "Nama",       placeholder: "Nama paket outbound" },
+    { key: "category",   label: "Kategori",   placeholder: "Contoh: Team Building" },
+    { key: "price",      label: "Harga",      type: "number", placeholder: "Harga per orang" },
+    { key: "duration",   label: "Durasi",     placeholder: "Contoh: 2 jam" },
+    { key: "activities", label: "Aktivitas",  type: "array", placeholder: "Tambah aktivitas..." },
+    { key: "facilities", label: "Fasilitas",  type: "array", placeholder: "Tambah fasilitas..." },
   ],
 };
 
-function TagInput({
-  values,
-  onChange,
-  placeholder,
-}: {
-  values: string[];
-  onChange: (v: string[]) => void;
-  placeholder?: string;
+/* ─── Tag Input ─── */
+function TagInput({ values, onChange, placeholder }: {
+  values: string[]; onChange: (v: string[]) => void; placeholder?: string;
 }) {
   const [input, setInput] = useState("");
   function add() {
-    const trimmed = input.trim();
-    if (trimmed && !values.includes(trimmed)) {
-      onChange([...values, trimmed]);
-    }
+    const t = input.trim();
+    if (t && !values.includes(t)) onChange([...values, t]);
     setInput("");
   }
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
+        <Input value={input} onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), add())}
           placeholder={placeholder}
-          className="bg-slate-800 border-slate-600 text-white text-sm h-8"
-        />
-        <Button
-          type="button"
-          size="sm"
-          onClick={add}
-          className="bg-slate-700 hover:bg-slate-600 text-white h-8 px-3 shrink-0"
-        >
+          className="bg-slate-800 border-slate-600 text-white text-sm h-8" />
+        <Button type="button" size="sm" onClick={add}
+          className="bg-slate-700 hover:bg-slate-600 text-white h-8 px-3 shrink-0">
           <Plus className="w-3.5 h-3.5" />
         </Button>
       </div>
       {values.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {values.map((v, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1 bg-slate-700 text-slate-300 text-xs rounded-full px-2.5 py-0.5"
-            >
+            <span key={i} className="flex items-center gap-1 bg-slate-700 text-slate-300 text-xs rounded-full px-2.5 py-0.5">
               {v}
-              <button
-                type="button"
-                onClick={() => onChange(values.filter((_, j) => j !== i))}
-                className="text-slate-500 hover:text-red-400 transition-colors"
-              >
+              <button type="button" onClick={() => onChange(values.filter((_, j) => j !== i))}
+                className="text-slate-500 hover:text-red-400 transition-colors">
                 <X className="w-3 h-3" />
               </button>
             </span>
@@ -153,27 +147,194 @@ function TagInput({
   );
 }
 
-function CatalogModal({
-  open,
-  onClose,
-  endpoint,
-  item,
-  onSuccess,
-}: {
-  open: boolean;
-  onClose: () => void;
-  endpoint: CatalogEndpoint;
-  item: CatalogItem | null;
-  onSuccess: () => void;
+/* ─── Image Gallery ─── */
+function ImageGallery({ images }: { images: string[] }) {
+  const [idx, setIdx] = useState(0);
+  if (!images.length) return null;
+  return (
+    <div>
+      <div className="relative aspect-video bg-slate-800 rounded-lg overflow-hidden mb-2">
+        <img src={images[idx]} alt="" className="w-full h-full object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+        {images.length > 1 && (
+          <>
+            <button onClick={() => setIdx((c) => (c - 1 + images.length) % images.length)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button onClick={() => setIdx((c) => (c + 1) % images.length)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+              {idx + 1}/{images.length}
+            </div>
+          </>
+        )}
+      </div>
+      {images.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {images.slice(0, 8).map((img, i) => (
+            <button key={i} onClick={() => setIdx(i)}
+              className={`w-12 h-12 rounded-md overflow-hidden border-2 transition-all ${i === idx ? "border-blue-500" : "border-transparent opacity-60 hover:opacity-100"}`}>
+              <img src={img} alt="" className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Detail Modal ─── */
+function DetailModal({ item, endpoint, open, onClose, onEdit, onDelete }: {
+  item: CatalogItem; endpoint: CatalogEndpoint; open: boolean;
+  onClose: () => void; onEdit: () => void; onDelete: () => void;
+}) {
+  const allImages = [item.image, ...(item.slide_images || [])].filter(Boolean) as string[];
+  const tab = TABS.find((t) => t.key === endpoint)!;
+
+  const typeColor = item.type === "villa"
+    ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+    : item.type === "glamping"
+    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+    : "bg-slate-700 text-slate-400 border-slate-600";
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-start justify-between gap-3 pr-6">
+            <div>
+              <DialogTitle className="text-white text-lg">{item.name}</DialogTitle>
+              {item.location && (
+                <div className="flex items-center gap-1 text-slate-400 text-sm mt-1">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  {item.location}
+                </div>
+              )}
+            </div>
+            {item.type && (
+              <Badge className={`border text-xs shrink-0 capitalize ${typeColor}`}>{item.type}</Badge>
+            )}
+            {item.category && !item.type && (
+              <Badge className="bg-slate-700 text-slate-300 border-slate-600 text-xs shrink-0">{item.category}</Badge>
+            )}
+          </div>
+        </DialogHeader>
+
+        {/* Gallery */}
+        {allImages.length > 0 && <ImageGallery images={allImages} />}
+
+        {/* Meta info */}
+        <div className="space-y-4">
+          {item.capacity && (
+            <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <Users className="w-4 h-4" />
+              Kapasitas: <span className="text-white">{item.capacity}</span>
+              {item.units != null && (
+                <span className="text-slate-500">· {item.units} unit</span>
+              )}
+            </div>
+          )}
+
+          {item.duration && (
+            <div className="flex items-center gap-2 text-slate-400 text-sm">
+              <span>⏱</span> Durasi: <span className="text-white">{item.duration}</span>
+            </div>
+          )}
+
+          {item.description && (
+            <p className="text-slate-400 text-sm leading-relaxed">{item.description}</p>
+          )}
+
+          {/* Rates (properties) */}
+          {item.rates && item.rates.length > 0 && (
+            <div>
+              <h4 className="text-white font-medium text-sm mb-2">Harga per Malam</h4>
+              <div className="space-y-1.5">
+                {item.rates.map((r, i) => (
+                  <div key={i} className="flex justify-between items-center bg-slate-800/60 rounded-lg px-3 py-2 text-sm">
+                    <span className="text-slate-300">{r.label}</span>
+                    <span className="text-white font-semibold">{formatRupiah(r.price)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Flat price (trips, catering, outbound) */}
+          {item.price != null && !item.rates?.length && (
+            <div className="flex items-center gap-2 text-sm">
+              <Tag className="w-4 h-4 text-slate-400" />
+              <span className="text-slate-400">Harga:</span>
+              <span className="text-white font-semibold text-base">{formatRupiah(item.price)}</span>
+            </div>
+          )}
+
+          {/* Array fields */}
+          {(["destinations", "activities", "menu", "facilities", "notes"] as ArrayField[]).map((field) => {
+            const arr = item[field];
+            if (!arr || !arr.length) return null;
+            const labels: Record<ArrayField, string> = {
+              destinations: "Destinasi",
+              activities:   "Aktivitas",
+              menu:         "Menu",
+              facilities:   "Fasilitas",
+              notes:        "Peraturan",
+            };
+            const isNotes = field === "notes";
+            return (
+              <div key={field}>
+                <h4 className="text-white font-medium text-sm mb-2">{labels[field]}</h4>
+                {isNotes ? (
+                  <ul className="space-y-1">
+                    {arr.map((v, i) => (
+                      <li key={i} className="text-slate-400 text-sm flex items-start gap-2">
+                        <span className="text-blue-400 mt-0.5 shrink-0">•</span>{v}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {arr.map((v, i) => (
+                      <Badge key={i} className="bg-slate-700 text-slate-300 border-slate-600 text-xs font-normal">{v}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 pt-2 border-t border-slate-800">
+          <Button onClick={onEdit}
+            className="flex-1 bg-blue-600 hover:bg-blue-500 text-white h-9">
+            <Pencil className="w-3.5 h-3.5 mr-1.5" />
+            Edit
+          </Button>
+          <Button onClick={onDelete} variant="outline"
+            className="border-red-600/40 text-red-400 hover:bg-red-500/10 h-9 px-3">
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── Form Modal ─── */
+function CatalogModal({ open, onClose, endpoint, item, onSuccess }: {
+  open: boolean; onClose: () => void; endpoint: CatalogEndpoint;
+  item: CatalogItem | null; onSuccess: () => void;
 }) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<CatalogItem>>({});
 
   useEffect(() => {
-    if (open) {
-      setForm(item ? { ...item } : {});
-    }
+    if (open) setForm(item ? { ...item } : {});
   }, [open, item]);
 
   function setField(key: keyof CatalogItem, value: string | number | string[]) {
@@ -184,12 +345,9 @@ function CatalogModal({
     e.preventDefault();
     setSaving(true);
     try {
-      let res: Response;
-      if (item) {
-        res = await updateCatalog(endpoint, { ...form, id: item.id } as CatalogItem);
-      } else {
-        res = await createCatalog(endpoint, form);
-      }
+      const res = item
+        ? await updateCatalog(endpoint, { ...form, id: item.id } as CatalogItem)
+        : await createCatalog(endpoint, form);
       if (!res.ok) throw new Error();
       toast({ title: item ? "Diperbarui" : "Ditambahkan", description: "Data berhasil disimpan" });
       onSuccess();
@@ -201,19 +359,15 @@ function CatalogModal({
     }
   }
 
-  const fields = FIELDS[endpoint];
   const tab = TABS.find((t) => t.key === endpoint)!;
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-white">
-            {item ? "Edit" : "Tambah"} {tab.label}
-          </DialogTitle>
+          <DialogTitle className="text-white">{item ? "Edit" : "Tambah"} {tab.label}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
-          {fields.map((field) => (
+          {FIELDS[endpoint].map((field) => (
             <div key={field.key} className="space-y-1.5">
               <label className="text-slate-400 text-xs font-medium">{field.label}</label>
               {field.type === "array" ? (
@@ -227,10 +381,7 @@ function CatalogModal({
                   type={field.type === "number" ? "number" : field.type === "url" ? "url" : "text"}
                   value={(form[field.key] as string | number) ?? ""}
                   onChange={(e) =>
-                    setField(
-                      field.key,
-                      field.type === "number" ? Number(e.target.value) : e.target.value
-                    )
+                    setField(field.key, field.type === "number" ? Number(e.target.value) : e.target.value)
                   }
                   placeholder={field.placeholder}
                   className="bg-slate-800 border-slate-600 text-white text-sm h-9"
@@ -239,19 +390,10 @@ function CatalogModal({
             </div>
           ))}
           <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              className="border-slate-600 text-slate-300 hover:bg-slate-800 h-9"
-            >
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-500 text-white h-9"
-            >
+            <Button type="button" variant="outline" onClick={onClose}
+              className="border-slate-600 text-slate-300 hover:bg-slate-800 h-9">Batal</Button>
+            <Button type="submit" disabled={saving}
+              className="bg-blue-600 hover:bg-blue-500 text-white h-9">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : item ? "Simpan" : "Tambah"}
             </Button>
           </div>
@@ -261,171 +403,140 @@ function CatalogModal({
   );
 }
 
-function ItemCard({
-  item,
-  endpoint,
-  onEdit,
-  onDelete,
-}: {
-  item: CatalogItem;
-  endpoint: CatalogEndpoint;
-  onEdit: () => void;
-  onDelete: () => void;
+/* ─── Item Card ─── */
+function ItemCard({ item, endpoint, onClick }: {
+  item: CatalogItem; endpoint: CatalogEndpoint; onClick: () => void;
 }) {
-  const arrayBadgeField: ArrayField | null =
-    endpoint === "properties" || endpoint === "trips" || endpoint === "outbound"
-      ? "facilities"
-      : endpoint === "catering"
-      ? "menu"
-      : null;
+  const mainPrice = item.rates?.length
+    ? Math.min(...item.rates.map((r) => r.price))
+    : item.price;
 
-  const subField =
-    endpoint === "trips"
-      ? item.category
-      : endpoint === "catering"
-      ? item.category
-      : endpoint === "outbound"
-      ? item.category
-      : endpoint === "properties"
-      ? item.location
-      : null;
+  const sub =
+    endpoint === "properties" ? item.location :
+    endpoint === "trips"      ? item.category :
+    endpoint === "catering"   ? item.category :
+    endpoint === "outbound"   ? item.category : null;
 
-  const extraField =
-    endpoint === "outbound" ? item.duration : null;
+  const arrField: ArrayField | null =
+    endpoint === "catering"   ? "menu" :
+    endpoint === "trips"      ? "destinations" :
+    endpoint === "outbound"   ? "activities" :
+    "facilities";
 
-  const arrayItems: string[] =
-    arrayBadgeField && item[arrayBadgeField]
-      ? (item[arrayBadgeField] as string[])
-      : [];
+  const arrItems: string[] = (arrField && item[arrField]) ? (item[arrField] as string[]) : [];
+
+  const typeColor =
+    item.type === "villa"    ? "bg-blue-500/20 text-blue-400 border-blue-500/30" :
+    item.type === "glamping" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" :
+    "bg-slate-700 text-slate-300 border-slate-600";
 
   return (
-    <Card className="bg-slate-800/60 border-slate-700/50 overflow-hidden hover:border-slate-600/60 transition-all">
-      {item.image && (
+    <Card
+      className="bg-slate-800/60 border-slate-700/50 overflow-hidden hover:border-slate-500/50 transition-all cursor-pointer group"
+      onClick={onClick}
+    >
+      {item.image ? (
         <div className="aspect-video bg-slate-700 overflow-hidden">
-          <img
-            src={item.image}
-            alt={item.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
+          <img src={item.image} alt={item.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => { (e.target as HTMLImageElement).parentElement!.innerHTML = ""; }} />
         </div>
-      )}
-      {!item.image && endpoint === "properties" && (
-        <div className="aspect-video bg-slate-700/50 flex items-center justify-center">
+      ) : endpoint === "properties" ? (
+        <div className="aspect-video bg-slate-700/40 flex items-center justify-center">
           <ImageIcon className="w-8 h-8 text-slate-600" />
         </div>
-      )}
+      ) : null}
+
       <CardContent className="p-3 space-y-2">
+        {/* Name + type badge */}
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-white font-semibold text-sm truncate">{item.name}</p>
-            {subField && (
-              <p className="text-slate-400 text-xs truncate mt-0.5">{subField}</p>
-            )}
-          </div>
-          {item.price != null && (
-            <span className="text-blue-400 font-semibold text-xs shrink-0">
-              {formatRupiah(item.price)}
-            </span>
+          <p className="text-white font-semibold text-sm leading-tight flex-1 min-w-0 truncate">{item.name}</p>
+          {item.type && (
+            <Badge className={`border text-[10px] shrink-0 capitalize px-1.5 ${typeColor}`}>{item.type}</Badge>
           )}
         </div>
 
-        {extraField && (
-          <p className="text-slate-500 text-xs">⏱ {extraField}</p>
-        )}
+        {/* Sub info */}
+        {sub && <p className="text-slate-400 text-xs truncate">{sub}</p>}
 
-        {item.description && (
+        {/* Duration */}
+        {item.duration && <p className="text-slate-500 text-xs">⏱ {item.duration}</p>}
+
+        {/* Description */}
+        {item.description && !sub && (
           <p className="text-slate-400 text-xs line-clamp-2">{item.description}</p>
         )}
 
-        {arrayItems.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {arrayItems.slice(0, 4).map((f, i) => (
-              <Badge
-                key={i}
-                className="bg-slate-700 text-slate-300 border-slate-600 text-[10px] font-normal px-1.5"
-              >
-                {f}
-              </Badge>
-            ))}
-            {arrayItems.length > 4 && (
-              <Badge className="bg-slate-700 text-slate-400 border-slate-600 text-[10px] font-normal px-1.5">
-                +{arrayItems.length - 4}
-              </Badge>
-            )}
+        {/* Price highlight */}
+        {mainPrice != null && (
+          <div className="flex items-baseline gap-1">
+            <span className="text-slate-500 text-[10px]">
+              {item.rates?.length ? "mulai" : ""}
+            </span>
+            <span className="text-blue-400 font-bold text-sm">{formatRupiah(mainPrice)}</span>
+            {item.rates?.length ? (
+              <span className="text-slate-500 text-[10px]">/ malam</span>
+            ) : null}
           </div>
         )}
 
-        <div className="flex gap-1.5 pt-1">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onEdit}
-            className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-700 h-7 text-xs"
-          >
-            <Pencil className="w-3 h-3 mr-1" />
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onDelete}
-            className="border-red-600/40 text-red-400 hover:bg-red-500/10 h-7 px-2.5"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
-        </div>
+        {/* Array badges */}
+        {arrItems.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {arrItems.slice(0, 3).map((f, i) => (
+              <Badge key={i} className="bg-slate-700 text-slate-300 border-slate-600 text-[10px] font-normal px-1.5">{f}</Badge>
+            ))}
+            {arrItems.length > 3 && (
+              <Badge className="bg-slate-700/60 text-slate-500 border-slate-700 text-[10px] font-normal px-1.5">+{arrItems.length - 3}</Badge>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
+/* ─── Main Page ─── */
 export default function KatalogPage() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<CatalogEndpoint>("properties");
   const [data, setData] = useState<Record<CatalogEndpoint, CatalogItem[]>>({
-    properties: [],
-    trips: [],
-    catering: [],
-    outbound: [],
+    properties: [], trips: [], catering: [], outbound: [],
   });
   const [loading, setLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editItem, setEditItem] = useState<CatalogItem | null>(null);
-  const [deleteItem, setDeleteItem] = useState<CatalogItem | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [detailItem, setDetailItem]  = useState<CatalogItem | null>(null);
+  const [editItem,   setEditItem]    = useState<CatalogItem | null>(null);
+  const [formOpen,   setFormOpen]    = useState(false);
+  const [deleteItem, setDeleteItem]  = useState<CatalogItem | null>(null);
+  const [deleting,   setDeleting]    = useState(false);
 
-  const load = useCallback(
-    async (ep: CatalogEndpoint = activeTab) => {
-      setLoading(true);
-      try {
-        const result = await getCatalog(ep);
-        setData((prev) => ({ ...prev, [ep]: result }));
-      } catch {
-        toast({ title: "Error", description: "Gagal memuat data", variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-    },
-    [activeTab, toast]
-  );
+  const load = useCallback(async (ep: CatalogEndpoint) => {
+    setLoading(true);
+    try {
+      const result = await getCatalog(ep);
+      setData((prev) => ({ ...prev, [ep]: result }));
+    } catch {
+      toast({ title: "Error", description: "Gagal memuat data", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
-    if (data[activeTab].length === 0) {
-      load(activeTab);
-    }
+    if (data[activeTab].length === 0) load(activeTab);
+    setTypeFilter("all");
   }, [activeTab]);
 
-  function handleAdd() {
-    setEditItem(null);
-    setModalOpen(true);
-  }
-
-  function handleEdit(item: CatalogItem) {
+  function openAdd() { setEditItem(null); setFormOpen(true); }
+  function openEdit(item: CatalogItem) {
+    setDetailItem(null);
     setEditItem(item);
-    setModalOpen(true);
+    setFormOpen(true);
+  }
+  function openDelete(item: CatalogItem) {
+    setDetailItem(null);
+    setDeleteItem(item);
   }
 
   async function handleDelete() {
@@ -440,23 +551,20 @@ export default function KatalogPage() {
         [activeTab]: prev[activeTab].filter((i) => i.id !== deleteItem.id),
       }));
     } catch {
-      toast({ title: "Error", description: "Gagal menghapus data", variant: "destructive" });
+      toast({ title: "Error", description: "Gagal menghapus", variant: "destructive" });
     } finally {
       setDeleting(false);
       setDeleteItem(null);
     }
   }
 
-  const currentTab = TABS.find((t) => t.key === activeTab)!;
-  const items = data[activeTab];
+  const rawItems = data[activeTab];
 
-  const tabColorClass: Record<string, string> = {
-    blue:   "bg-blue-600 text-white",
-    emerald:"bg-emerald-600 text-white",
-    orange: "bg-orange-600 text-white",
-    violet: "bg-violet-600 text-white",
-  };
-  const tabInactiveClass = "text-slate-400 hover:text-white hover:bg-slate-800";
+  const items = activeTab === "properties" && typeFilter !== "all"
+    ? rawItems.filter((p) => (p.type || "").toLowerCase() === typeFilter)
+    : rawItems;
+
+  const currentTab = TABS.find((t) => t.key === activeTab)!;
 
   return (
     <div className="space-y-5">
@@ -467,19 +575,12 @@ export default function KatalogPage() {
           <p className="text-slate-400 text-sm">{items.length} item · {currentTab.label}</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => load(activeTab)}
-            className="border-slate-600 text-slate-300 hover:bg-slate-800 h-8 px-2.5"
-          >
+          <Button size="sm" variant="outline" onClick={() => load(activeTab)}
+            className="border-slate-600 text-slate-300 hover:bg-slate-800 h-8 px-2.5">
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
-          <Button
-            size="sm"
-            onClick={handleAdd}
-            className="bg-blue-600 hover:bg-blue-500 text-white h-8 px-3"
-          >
+          <Button size="sm" onClick={openAdd}
+            className="bg-blue-600 hover:bg-blue-500 text-white h-8 px-3">
             <Plus className="w-3.5 h-3.5 mr-1" />
             Tambah
           </Button>
@@ -492,19 +593,34 @@ export default function KatalogPage() {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
           return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-1 justify-center ${
-                active ? tabColorClass[tab.color] : tabInactiveClass
-              }`}
-            >
+                active ? TAB_ACTIVE[tab.color] : "text-slate-400 hover:text-white hover:bg-slate-800"
+              }`}>
               <Icon className="w-3.5 h-3.5" />
               {tab.label}
             </button>
           );
         })}
       </div>
+
+      {/* Properties type filter */}
+      {activeTab === "properties" && (
+        <div className="flex gap-2">
+          {["all", "villa", "glamping"].map((t) => (
+            <button key={t} onClick={() => setTypeFilter(t)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all capitalize border ${
+                typeFilter === t
+                  ? t === "villa"    ? "bg-blue-600/20 text-blue-400 border-blue-500/40"
+                  : t === "glamping" ? "bg-emerald-600/20 text-emerald-400 border-emerald-500/40"
+                  : "bg-slate-700 text-white border-slate-600"
+                  : "text-slate-500 border-slate-700 hover:text-slate-300 hover:border-slate-600"
+              }`}>
+              {t === "all" ? "Semua" : t}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
       {loading ? (
@@ -516,34 +632,36 @@ export default function KatalogPage() {
           <currentTab.icon className="w-10 h-10 mx-auto mb-3 text-slate-700" />
           Belum ada data {currentTab.label}
           <div className="mt-3">
-            <Button
-              size="sm"
-              onClick={handleAdd}
-              className="bg-blue-600 hover:bg-blue-500 text-white"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Tambah Pertama
+            <Button size="sm" onClick={openAdd} className="bg-blue-600 hover:bg-blue-500 text-white">
+              <Plus className="w-3.5 h-3.5 mr-1" />Tambah Pertama
             </Button>
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {items.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              endpoint={activeTab}
-              onEdit={() => handleEdit(item)}
-              onDelete={() => setDeleteItem(item)}
-            />
+            <ItemCard key={item.id} item={item} endpoint={activeTab}
+              onClick={() => setDetailItem(item)} />
           ))}
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* Detail Modal */}
+      {detailItem && (
+        <DetailModal
+          open={!!detailItem}
+          item={detailItem}
+          endpoint={activeTab}
+          onClose={() => setDetailItem(null)}
+          onEdit={() => openEdit(detailItem)}
+          onDelete={() => openDelete(detailItem)}
+        />
+      )}
+
+      {/* Add/Edit Form Modal */}
       <CatalogModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
         endpoint={activeTab}
         item={editItem}
         onSuccess={() => load(activeTab)}
@@ -559,14 +677,9 @@ export default function KatalogPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700">
-              Batal
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleting}
-              className="bg-red-600 hover:bg-red-500 text-white"
-            >
+            <AlertDialogCancel className="bg-slate-800 border-slate-600 text-slate-300 hover:bg-slate-700">Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting}
+              className="bg-red-600 hover:bg-red-500 text-white">
               {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Hapus"}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -115,12 +115,17 @@ export interface CatalogItem {
   description?: string;
   image?: string;
   location?: string;
+  type?: string;
+  capacity?: string;
+  units?: number;
+  duration?: string;
   facilities?: string[];
   menu?: string[];
   activities?: string[];
   destinations?: string[];
   notes?: string[];
-  duration?: string;
+  rates?: Array<{ label: string; price: number }>;
+  slide_images?: string[];
 }
 
 export async function getCatalog(endpoint: CatalogEndpoint): Promise<CatalogItem[]> {
