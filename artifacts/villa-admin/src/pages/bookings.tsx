@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import ModalBooking from "@/components/modal-booking";
+import ModalBooking, { detectBookingCategory, type BookingCategory } from "@/components/modal-booking";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -38,6 +38,20 @@ import {
   RefreshCw,
   ChevronRight,
 } from "lucide-react";
+
+const CATEGORY_COLORS: Record<string, string> = {
+  property: "bg-blue-500/20 text-blue-400",
+  trips:    "bg-violet-500/20 text-violet-400",
+  catering: "bg-orange-500/20 text-orange-400",
+  outbound: "bg-emerald-500/20 text-emerald-400",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  property: "Properti",
+  trips:    "Trips",
+  catering: "Catering",
+  outbound: "Outbound",
+};
 
 const MONTHS = [
   "Januari","Februari","Maret","April","Mei","Juni",
@@ -55,6 +69,7 @@ export default function BookingsPage() {
   const [filterYear, setFilterYear] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterAdmin, setFilterAdmin] = useState("all");
+  const [filterCategory, setFilterCategory] = useState<BookingCategory | "all">("all");
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [modalMode, setModalMode] = useState<"view" | "edit" | "create">("view");
   const [modalOpen, setModalOpen] = useState(false);
@@ -100,9 +115,10 @@ export default function BookingsPage() {
       const matchStatus = filterStatus === "all" || r.status === filterStatus;
       const matchAdmin = superAdmin || r.admin_name?.toLowerCase() === adminName.toLowerCase();
       const matchFilterAdmin = !superAdmin || filterAdmin === "all" || r.admin_name?.toLowerCase() === filterAdmin.toLowerCase();
-      return matchSearch && matchMonth && matchYear && matchStatus && matchAdmin && matchFilterAdmin;
+      const matchCategory = filterCategory === "all" || detectBookingCategory(r.property_id) === filterCategory;
+      return matchSearch && matchMonth && matchYear && matchStatus && matchAdmin && matchFilterAdmin && matchCategory;
     });
-  }, [reservations, search, filterMonth, filterYear, filterStatus, filterAdmin, superAdmin, adminName]);
+  }, [reservations, search, filterMonth, filterYear, filterStatus, filterAdmin, filterCategory, superAdmin, adminName]);
 
   function openCreate() {
     setSelected(null);
@@ -167,6 +183,29 @@ export default function BookingsPage() {
             Tambah
           </Button>
         </div>
+      </div>
+
+      {/* Category filter */}
+      <div className="flex gap-0 rounded-lg overflow-hidden border border-slate-700 self-start">
+        {([
+          { key: "all",      label: "Semua" },
+          { key: "property", label: "Properti" },
+          { key: "trips",    label: "Trips" },
+          { key: "catering", label: "Catering" },
+          { key: "outbound", label: "Outbound" },
+        ] as { key: BookingCategory | "all"; label: string }[]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setFilterCategory(key)}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              filterCategory === key
+                ? "bg-blue-600 text-white"
+                : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -280,7 +319,12 @@ export default function BookingsPage() {
                     {getStatusLabel(r.status)}
                   </Badge>
                 </div>
-                <p className="text-slate-300 text-xs font-medium truncate mb-1">{r.property_name}</p>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${CATEGORY_COLORS[detectBookingCategory(r.property_id)]}`}>
+                    {CATEGORY_LABELS[detectBookingCategory(r.property_id)]}
+                  </span>
+                  <p className="text-slate-300 text-xs font-medium truncate">{r.property_name}</p>
+                </div>
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span>{formatDate(r.checkin)} → {formatDate(r.checkout)}</span>
                   <span className="text-slate-300 font-medium">{formatRupiah(r.total_price)}</span>
@@ -318,7 +362,12 @@ export default function BookingsPage() {
                         <p className="text-slate-500 text-xs">{r.guest_phone}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-slate-300">{r.property_name}</p>
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${CATEGORY_COLORS[detectBookingCategory(r.property_id)]}`}>
+                            {CATEGORY_LABELS[detectBookingCategory(r.property_id)]}
+                          </span>
+                          <p className="text-slate-300">{r.property_name}</p>
+                        </div>
                         <p className="text-slate-500 text-xs">{r.address}</p>
                       </td>
                       <td className="px-4 py-3 text-slate-400">{formatDate(r.checkin)}</td>

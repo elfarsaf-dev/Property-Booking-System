@@ -49,6 +49,15 @@ export function getStatusLabel(status: string): string {
   }
 }
 
+/* ─────────────────────── booking category ─────────────────────── */
+
+export function getBookingCategoryLabel(propertyId: string): string {
+  if (propertyId?.startsWith("trips:")) return "Trips";
+  if (propertyId?.startsWith("catering:")) return "Catering";
+  if (propertyId?.startsWith("outbound:")) return "Outbound";
+  return "Properti";
+}
+
 /* ─────────────────────── period helpers ─────────────────────── */
 
 const MONTHS_ID = [
@@ -139,6 +148,7 @@ const COL_DEFS = [
   { header: "Nama Tamu",   key: "name",     width: 22, align: "left"   as const },
   { header: "No HP",       key: "phone",    width: 16, align: "left"   as const },
   { header: "Properti",    key: "prop",     width: 26, align: "left"   as const },
+  { header: "Kategori",    key: "cat",      width: 12, align: "center" as const },
   { header: "Checkin",     key: "ci",       width: 13, align: "center" as const },
   { header: "Checkout",    key: "co",       width: 13, align: "center" as const },
   { header: "Malam",       key: "nights",   width: 8,  align: "center" as const },
@@ -152,6 +162,10 @@ const COL_DEFS = [
   { header: "Admin",       key: "admin",    width: 14, align: "left"   as const },
   { header: "Catatan",     key: "note",     width: 32, align: "left"   as const },
 ] as const;
+
+// Column indices (1-based):
+// 1=No, 2=Nama, 3=HP, 4=Properti, 5=Kategori, 6=Checkin, 7=Checkout, 8=Malam,
+// 9=Asal, 10=Peserta, 11=Kendaraan, 12=Total, 13=DP, 14=Sisa, 15=Status, 16=Admin, 17=Catatan
 
 const NC = COL_DEFS.length;
 const IDR_FMT = `"Rp"#,##0`;
@@ -249,6 +263,7 @@ function buildStyledSheet(
         r.guest_name ?? "",
         r.guest_phone ?? "",
         includePropertyCol ? (r.property_name ?? "") : propName,
+        getBookingCategoryLabel(r.property_id),
         r.checkin  ? formatDate(r.checkin)  : "",
         r.checkout ? formatDate(r.checkout) : "",
         nights,
@@ -273,8 +288,8 @@ function buildStyledSheet(
         });
       });
 
-      // Status color override
-      const sc = row.getCell(14);
+      // Status color override (col 15)
+      const sc = row.getCell(15);
       const statusFg =
         r.status === "lunas"   ? C.green :
         r.status === "pending" ? C.amber : C.red;
@@ -283,19 +298,19 @@ function buildStyledSheet(
         r.status === "pending" ? C.amberBg : C.redBg;
       styleCell(sc, { bg: statusBg, fontColor: statusFg, bold: true, align: "center" });
 
-      // Sisa color: red if positive, green if zero/paid
-      const sisaCell = row.getCell(13);
+      // Sisa color: red if positive, green if zero/paid (col 14)
+      const sisaCell = row.getCell(14);
       styleCell(sisaCell, {
         bg: rowBg, fontColor: sisa > 0 ? C.red : C.green,
         bold: true, align: "right", numFmt: IDR_FMT,
       });
 
-      // Total & DP coloring
-      styleCell(row.getCell(11), { bg: rowBg, fontColor: C.navyDark, bold: true, align: "right", numFmt: IDR_FMT });
-      styleCell(row.getCell(12), { bg: rowBg, fontColor: C.teal, align: "right", numFmt: IDR_FMT });
-      // Malam (indigo)
-      styleCell(row.getCell(7), { bg: rowBg, fontColor: C.indigo, bold: true, align: "center" });
-      // No column (gray)
+      // Total (col 12) & DP (col 13) coloring
+      styleCell(row.getCell(12), { bg: rowBg, fontColor: C.navyDark, bold: true, align: "right", numFmt: IDR_FMT });
+      styleCell(row.getCell(13), { bg: rowBg, fontColor: C.teal, align: "right", numFmt: IDR_FMT });
+      // Malam (indigo, col 8)
+      styleCell(row.getCell(8), { bg: rowBg, fontColor: C.indigo, bold: true, align: "center" });
+      // No column (gray, col 1)
       styleCell(row.getCell(1), { bg: rowBg, fontColor: C.grayText, align: "center" });
     });
 
