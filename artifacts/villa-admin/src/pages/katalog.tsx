@@ -4,6 +4,7 @@ import {
   createCatalog,
   updateCatalog,
   deleteCatalog,
+  uploadImage,
   type CatalogItem,
   type CatalogEndpoint,
 } from "@/services/api";
@@ -45,6 +46,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Tag,
+  Search,
+  Upload,
 } from "lucide-react";
 
 type Tab = { key: CatalogEndpoint; label: string; icon: React.ElementType; color: string };
@@ -68,7 +71,7 @@ type ArrayField = "facilities" | "menu" | "activities" | "destinations" | "notes
 interface FieldDef {
   key: keyof CatalogItem;
   label: string;
-  type?: "text" | "number" | "url" | "array" | "rates";
+  type?: "text" | "number" | "url" | "array" | "rates" | "image";
   placeholder?: string;
 }
 
@@ -78,7 +81,7 @@ const FIELDS: Record<CatalogEndpoint, FieldDef[]> = {
     { key: "location",   label: "Lokasi",     placeholder: "Lokasi properti" },
     { key: "type",       label: "Tipe",       placeholder: "villa / glamping" },
     { key: "capacity",   label: "Kapasitas",  placeholder: "Contoh: 20 orang" },
-    { key: "image",      label: "URL Gambar", type: "url",   placeholder: "https://..." },
+    { key: "image",      label: "Gambar",     type: "image" },
     { key: "rates",      label: "Harga (tarif)", type: "rates" },
     { key: "facilities", label: "Fasilitas",  type: "array", placeholder: "Tambah fasilitas..." },
     { key: "notes",      label: "Peraturan",  type: "array", placeholder: "Tambah peraturan..." },
@@ -87,7 +90,7 @@ const FIELDS: Record<CatalogEndpoint, FieldDef[]> = {
     { key: "name",         label: "Nama",       placeholder: "Nama trip" },
     { key: "category",     label: "Kategori",   placeholder: "Contoh: Adventure" },
     { key: "price",        label: "Harga",      type: "number", placeholder: "Harga per orang" },
-    { key: "image",        label: "URL Gambar", type: "url",    placeholder: "https://..." },
+    { key: "image",        label: "Gambar",     type: "image" },
     { key: "destinations", label: "Destinasi",  type: "array",  placeholder: "Tambah destinasi..." },
     { key: "facilities",   label: "Fasilitas",  type: "array",  placeholder: "Tambah fasilitas..." },
     { key: "notes",        label: "Catatan",    type: "array",  placeholder: "Tambah catatan..." },
@@ -96,7 +99,7 @@ const FIELDS: Record<CatalogEndpoint, FieldDef[]> = {
     { key: "name",        label: "Nama",       placeholder: "Nama paket catering" },
     { key: "category",    label: "Kategori",   placeholder: "Contoh: Prasmanan" },
     { key: "price",       label: "Harga",      type: "number", placeholder: "Harga per porsi/paket" },
-    { key: "image",       label: "URL Gambar", type: "url",    placeholder: "https://..." },
+    { key: "image",       label: "Gambar",     type: "image" },
     { key: "description", label: "Deskripsi",  placeholder: "Deskripsi singkat" },
     { key: "menu",        label: "Menu",       type: "array",  placeholder: "Tambah menu..." },
   ],
@@ -106,7 +109,7 @@ const FIELDS: Record<CatalogEndpoint, FieldDef[]> = {
     { key: "price",       label: "Harga",      type: "number", placeholder: "Harga per orang" },
     { key: "duration",    label: "Durasi",     placeholder: "Contoh: 2 jam" },
     { key: "capacity",    label: "Kapasitas",  placeholder: "Contoh: 10-30 orang" },
-    { key: "image",       label: "URL Gambar", type: "url",    placeholder: "https://..." },
+    { key: "image",       label: "Gambar",     type: "image" },
     { key: "description", label: "Deskripsi",  placeholder: "Deskripsi singkat" },
     { key: "activities",  label: "Aktivitas",  type: "array",  placeholder: "Tambah aktivitas..." },
     { key: "facilities",  label: "Fasilitas",  type: "array",  placeholder: "Tambah fasilitas..." },
@@ -200,6 +203,68 @@ function RatesInput({ values, onChange }: {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Image Uploader ─── */
+function ImageUploader({ value, onChange }: {
+  value: string; onChange: (url: string) => void;
+}) {
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      onChange(url);
+      toast({ title: "Upload berhasil", description: "Gambar berhasil diunggah" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Upload gagal";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Preview */}
+      {value && (
+        <div className="relative aspect-video bg-slate-800 rounded-lg overflow-hidden">
+          <img src={value} alt="preview" className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <button type="button"
+            onClick={() => onChange("")}
+            className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center text-white hover:bg-red-600/80 transition-colors">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      {/* Upload + URL row */}
+      <div className="flex gap-2">
+        <label className={`flex items-center gap-1.5 px-3 h-9 rounded-lg border text-xs font-medium cursor-pointer transition-colors shrink-0 ${
+          uploading
+            ? "border-blue-500/50 text-blue-400 bg-blue-500/10"
+            : "border-slate-600 text-slate-300 hover:bg-slate-700"
+        }`}>
+          {uploading
+            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            : <Upload className="w-3.5 h-3.5" />}
+          {uploading ? "Uploading..." : "Pilih File"}
+          <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+        </label>
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="atau paste URL gambar..."
+          className="bg-slate-800 border-slate-600 text-white text-sm h-9 flex-1"
+        />
+      </div>
     </div>
   );
 }
@@ -429,7 +494,12 @@ function CatalogModal({ open, onClose, endpoint, item, onSuccess }: {
           {FIELDS[endpoint].map((field) => (
             <div key={field.key} className="space-y-1.5">
               <label className="text-slate-400 text-xs font-medium">{field.label}</label>
-              {field.type === "rates" ? (
+              {field.type === "image" ? (
+                <ImageUploader
+                  value={(form.image as string) || ""}
+                  onChange={(url) => setField("image", url)}
+                />
+              ) : field.type === "rates" ? (
                 <RatesInput
                   values={(form.rates as Array<{label:string;price:number}>) || []}
                   onChange={(v) => setField("rates", v)}
@@ -557,6 +627,7 @@ export default function KatalogPage() {
   });
   const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [detailItem, setDetailItem] = useState<CatalogItem | null>(null);
   const [editItem,   setEditItem]   = useState<CatalogItem | null>(null);
   const [formOpen,   setFormOpen]   = useState(false);
@@ -578,6 +649,7 @@ export default function KatalogPage() {
   useEffect(() => {
     if (data[activeTab].length === 0) load(activeTab);
     setTypeFilter("all");
+    setSearch("");
   }, [activeTab]);
 
   function openAdd() { setEditItem(null); setFormOpen(true); }
@@ -611,9 +683,13 @@ export default function KatalogPage() {
   }
 
   const rawItems = data[activeTab];
-  const items = activeTab === "properties" && typeFilter !== "all"
-    ? rawItems.filter((p) => (p.type || "").toLowerCase() === typeFilter)
-    : rawItems;
+  const items = rawItems.filter((p) => {
+    const matchType = activeTab !== "properties" || typeFilter === "all"
+      || (p.type || "").toLowerCase() === typeFilter;
+    const q = search.toLowerCase().trim();
+    const matchSearch = !q || p.name?.toLowerCase().includes(q);
+    return matchType && matchSearch;
+  });
 
   const currentTab = TABS.find((t) => t.key === activeTab)!;
 
@@ -652,6 +728,17 @@ export default function KatalogPage() {
             </button>
           );
         })}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={`Cari nama ${currentTab.label.toLowerCase()}...`}
+          className="bg-slate-800 border-slate-600 text-white text-sm h-8 pl-8"
+        />
       </div>
 
       {/* Properties type filter */}

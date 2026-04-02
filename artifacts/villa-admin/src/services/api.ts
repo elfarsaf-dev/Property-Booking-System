@@ -155,3 +155,29 @@ export async function deleteCatalog(endpoint: CatalogEndpoint, id: string): Prom
     method: "DELETE",
   });
 }
+
+export async function uploadImage(file: File): Promise<string> {
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const res = await fetch(`${BASE_URL}/upload${getAuth()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fileName: file.name, content: base64 }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "Upload gagal");
+    throw new Error(text);
+  }
+
+  const data = await res.json();
+  return data.content?.download_url as string;
+}
